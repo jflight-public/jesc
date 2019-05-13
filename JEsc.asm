@@ -42,7 +42,7 @@ $NOMOD51
 ;
 ;**** **** **** **** ****
 ; Revision history:
-; - Rev18.0 Started. Built upon rev 16.7 of base code
+; - Rev1.0 Started. Built upon rev 16.7 of base code
 ;
 ;**** **** **** **** ****
 ; Minimum 8K Bytes of In-System Self-Programmable Flash
