@@ -3291,13 +3291,17 @@ wait_for_power_on:
     clr A
     mov Power_On_Wait_Cnt_L, A  ; Clear wait counter
     mov Power_On_Wait_Cnt_H, A  
+    mov Bit_Access, #0
 wait_for_power_on_loop:
+    inc Bit_Access
+    jnb Bit_Access.1, wait_for_power_on_no_beep
+    mov Bit_Access, #0
     inc Power_On_Wait_Cnt_L     ; Increment low wait counter
     mov A, Power_On_Wait_Cnt_L
     cpl A
     jnz wait_for_power_on_no_beep; Counter wrapping (about 3 sec)
-
     inc Power_On_Wait_Cnt_H     ; Increment high wait counter
+
     mov Temp1, #Pgm_Beacon_Delay
     mov A, @Temp1
     mov Temp1, #25      ; Approximately 1 min
