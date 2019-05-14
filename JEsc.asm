@@ -437,8 +437,8 @@ Temp_Storage:               DS  48      ; Temporary storage
      
                                 ;**** **** **** **** ****
 CSEG AT 1A00h            ; "Eeprom" segment
-EEPROM_FW_MAIN_REVISION     EQU 16      ; Main revision of the firmware
-EEPROM_FW_SUB_REVISION      EQU 7       ; Sub revision of the firmware
+EEPROM_FW_MAIN_REVISION     EQU 1      ; Main revision of the firmware
+EEPROM_FW_SUB_REVISION      EQU 2       ; Sub revision of the firmware
 EEPROM_LAYOUT_REVISION      EQU 33      ; Revision of the EEPROM layout
 
 Eep_FW_Main_Revision:       DB  EEPROM_FW_MAIN_REVISION         ; EEPROM firmware main revision number
@@ -742,6 +742,10 @@ t1_int_decode_lsb:
     mov Temp2, A
     mov A, Temp3
     swap    A
+
+    jnb Flags2.RCP_INVERTED, ($+4)
+    cpl A
+    
     anl A, #0F0h
     clr C
     subb    A, Temp2
@@ -3222,14 +3226,24 @@ validate_rcp_start:
 
     ; Beep arm sequence start signal
     clr     IE_EA                       ; Disable all interrupts
+    mov C, Flags2.RCP_INVERTED
+    anl C, SERVICE_DETECTED
+    jc rcp_valid_inverted_beep
+
+    call beep_f4
+    call beep_f4
+    sjmp arming_start
+
+rcp_valid_inverted_beep:    
     call beep_f3                        ; Signal that RC pulse is ready
     call beep_f3
+    
+    ; Arming sequence start
+arming_start:
     setb    IE_EA                       ; Enable all interrupts
     call twait200ms 
     call twait100ms             ; Wait for new throttle value
 
-    ; Arming sequence start
-arming_start:
     clr C
     mov A, New_Rcp          ; Load new RC pulse value
     subb    A, #1               ; Below stop?
@@ -3238,12 +3252,30 @@ arming_start:
     jmp arming_start            ; No - start over
 
 arm_end_beep:
-    ; Beep arm sequence end signal
     clr     IE_EA               ; Disable all interrupts
+    mov C, Flags2.RCP_INVERTED
+    anl C, SERVICE_DETECTED
+    jc arm_inverted_beep
+    call beep_f1                ; Signal that rcpulse is ready
+    setb IE_EA
+    call twait100ms
+    clr IE_EA
+    call beep_f1
+    setb IE_EA
+    call twait100ms
+    clr IE_EA
+    call beep_f1
+    setb IE_EA
+    call twait100ms
+    clr IE_EA
+    sjmp arm_beep_done
+    
+arm_inverted_beep:  
     call beep_f4                ; Signal that rcpulse is ready
     call beep_f4
     call beep_f4
-    call beep_f4
+
+arm_beep_done:  
     setb    IE_EA               ; Enable all interrupts
     call twait200ms
     
@@ -3884,8 +3916,8 @@ jmp_wait_for_power_on:
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 
-$include (JEscBootLoad.inc)           ; Include source code for bootloader
 $include (JEscPgm.inc)                ; Include source code for programming the ESC
+$include (JEscBootLoad.inc)           ; Include source code for bootloader
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 

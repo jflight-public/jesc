@@ -4,7 +4,7 @@
     
 // Service entry points for service detection, initialization, interrupts etc
 
-SERVICE_START         EQU 1300h
+SERVICE_START         EQU 1500h
 SERVICE_INIT          EQU (SERVICE_START + 80h)
 SERVICE_BEGIN_WAIT    EQU (SERVICE_START + 100h)
 SERVICE_END_WAIT      EQU (SERVICE_START + 180h)
