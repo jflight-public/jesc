@@ -492,6 +492,14 @@ Comm_Period4x_H    EQU Period_H
 CSEG AT 1A60h
 Eep_Name:                   DB  "                "              ; Name tag (16 Bytes)
 
+End_Wait MACRO
+local l1
+    jnb SERVICE_DETECTED, l1
+    jmp SERVICE_END_WAIT
+l1: 
+ENDM    
+    
+
 ;**** **** **** **** ****
 CSEG AT 0               ; Code segment start
     jmp reset
@@ -510,7 +518,20 @@ CSEG AT 3Bh         ; SMB irq
 CSEG AT 5Bh         ; Pca interrupt
     jmp pca_int
 CSEG AT 73h         ; Timer3 overflow/compare interrupt
-    jmp t3_int  
+
+t3_int: ; Used for commutation timing
+    anl EIE1, #7Fh
+    clr IE_EA
+    mov TMR3RLL, #0FAh      ; Set a short delay before next interrupt
+    mov TMR3RLH, #0FFh
+    setb IE_EA
+    anl TMR3CN0, #07fh             ; clear irq flag
+    jnb WAIT_ACTIVE, t3_exit
+    clr WAIT_ACTIVE 
+    End_Wait
+t3_exit:    
+reti
+
 CSEG AT 9bh         ; Timer4 overflow/compare interrupt
     jmp SERVICE_T4_INT   
 CSEG AT 0a0h            ; Code segment after interrupt vectors 
@@ -592,21 +613,16 @@ ENDM
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
-    clr IE_EA
+    anl EIE1, #7Fh
+//    clr IE_EA
     jnb WAIT_ACTIVE, l2
     call SERVICE_BEGIN_WAIT
     mov SFRPAGE, #0
 l1:
     jb WAIT_ACTIVE, l1
 l2:
-    setb IE_EA
-ENDM    
-    
-End_Wait MACRO
-local l1
-    jnb SERVICE_DETECTED, l1
-    jmp SERVICE_END_WAIT
-l1: 
+    orl EIE1, #80h
+//    setb IE_EA
 ENDM    
     
 Notify_Frame MACRO  
@@ -1013,6 +1029,7 @@ t2_int_exit:
 ;               ACC can not be used, as it is not pushed to stack
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
+IF 0
 t3_int: ; Used for commutation timing
     clr IE_EA
     anl EIE1, #7Fh
@@ -1026,7 +1043,7 @@ t3_int: ; Used for commutation timing
 t3_exit:    
 reti
     
-
+ENDIF
 
     
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
@@ -3046,7 +3063,24 @@ pgm_start:
     mov Initial_Arm, #1
 
     Set_MCU_Clk_48MHz
+    
+IF 0
+    clr IE_EA
+    mov FLKEY, #0a5h
+    mov FLKEY, #0f1h
 
+    orl	PSCTL, #01h			; Set the PSWE bit
+	anl	PSCTL, #0FDh			; Clear the PSEE bit
+
+    
+    mov DPTR, #0FBFFh
+    mov A, #0fdh
+    movx @DPTR, A
+
+    anl PSCTL, #0fch
+    setb IE_EA
+ENDIF
+    
     ; Initializing beep
     clr IE_EA           ; Disable interrupts explicitly
     call wait200ms  
