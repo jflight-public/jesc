@@ -613,16 +613,16 @@ ENDM
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
-    anl EIE1, #7Fh
-//    clr IE_EA
+//    anl EIE1, #7Fh
+    clr IE_EA
     jnb WAIT_ACTIVE, l2
     call SERVICE_BEGIN_WAIT
     mov SFRPAGE, #0
 l1:
     jb WAIT_ACTIVE, l1
 l2:
-    orl EIE1, #80h
-//    setb IE_EA
+//    orl EIE1, #80h
+    setb IE_EA
 ENDM    
     
 Notify_Frame MACRO  
@@ -630,7 +630,7 @@ Notify_Frame MACRO
 ENDM   
 
 Init_Plugin MACRO
-    mov DPTR, #SERVICE_START
+    mov DPTR, #SERVICE_MAGIC
     clr A
     movc A, @A+DPTR
     cjne A, #'T', plugin_notfound
