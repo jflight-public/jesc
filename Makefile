@@ -7,9 +7,9 @@ MCUS         = H
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90
 
 # example single target
-VARIANT     ?= G
+VARIANT     ?= F
 MCU         ?= H
-FETON_DELAY ?= 30
+FETON_DELAY ?= 40
 
 # configure the script to use the wine installation delivered with
 # SimplicityStudio. these wine settings are quite important. if you get

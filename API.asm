@@ -5,7 +5,7 @@
 // Service entry points for service detection, initialization, interrupts etc
 
 SERVICE_MAGIC         EQU 03e00h
-SERVICE_START         EQU 0f800h
+SERVICE_START         EQU 0f900h
 SERVICE_INIT          EQU (SERVICE_START + 00h)
 SERVICE_NOTIFY_FRAME  EQU (SERVICE_START + 30h)
 SERVICE_BEGIN_WAIT    EQU (SERVICE_START + 50h)
