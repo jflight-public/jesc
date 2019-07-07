@@ -1,10 +1,13 @@
+// Copyright 2019 Thorsten Laux
 
 // This file defines constants to allow services to extend 8051 assembler based
 // applications. It's dual licensed under GPL3 and MIT licenses.
     
 // Service entry points for service detection, initialization, interrupts etc
 
+SERVICE_CURRENT_VERSION EQU 01h
 SERVICE_MAGIC         EQU 03e00h
+SERVICE_VERSION       EQU 03e04h
 SERVICE_START         EQU 0f900h
 SERVICE_INIT          EQU (SERVICE_START + 00h)
 SERVICE_NOTIFY_FRAME  EQU (SERVICE_START + 30h)

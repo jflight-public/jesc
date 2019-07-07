@@ -438,7 +438,7 @@ Temp_Storage:               DS  48      ; Temporary storage
                                 ;**** **** **** **** ****
 CSEG AT 1A00h            ; "Eeprom" segment
 EEPROM_FW_MAIN_REVISION     EQU 1      ; Main revision of the firmware
-EEPROM_FW_SUB_REVISION      EQU 2       ; Sub revision of the firmware
+EEPROM_FW_SUB_REVISION      EQU 3       ; Sub revision of the firmware
 EEPROM_LAYOUT_REVISION      EQU 33      ; Revision of the EEPROM layout
 
 Eep_FW_Main_Revision:       DB  EEPROM_FW_MAIN_REVISION         ; EEPROM firmware main revision number
@@ -492,6 +492,9 @@ Comm_Period4x_H    EQU Period_H
 CSEG AT 1A60h
 Eep_Name:                   DB  "                "              ; Name tag (16 Bytes)
 
+CSEG AT 0A0h
+Jesc_Name:                   DB  "JESC01          "              ; Name tag (16 Bytes)
+
 End_Wait MACRO
 local l1
     jnb SERVICE_DETECTED, l1
@@ -502,7 +505,7 @@ ENDM
 
 ;**** **** **** **** ****
 CSEG AT 0               ; Code segment start
-    jmp reset
+    jmp check_bootloader
 CSEG AT 03h         ; Int0 interrupt    
     jmp int0_int    
 CSEG AT 0Bh         ; Timer0 overflow interrupt
@@ -534,7 +537,7 @@ reti
 
 CSEG AT 9bh         ; Timer4 overflow/compare interrupt
     jmp SERVICE_T4_INT   
-CSEG AT 0a0h            ; Code segment after interrupt vectors 
+CSEG AT 0b0h            ; Code segment after interrupt vectors 
 ;**** **** **** **** ****
 
 ; Table definitions
@@ -642,6 +645,10 @@ Init_Plugin MACRO
     clr A
     movc A, @A+DPTR
     cjne A, #'X', plugin_notfound
+    inc DPTR
+    clr A
+    movc A, @A+DPTR
+    cjne A, #SERVICE_CURRENT_VERSION, plugin_notfound
     lcall SERVICE_INIT
     setb SERVICE_DETECTED
     sjmp ($+4)
@@ -1256,7 +1263,6 @@ ENDIF
 ;;; 
 
 
-    
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 ;
 ; Wait xms ~(x*4*250)  (Different entry points) 
@@ -3959,7 +3965,22 @@ $include (JEscBootLoad.inc)           ; Include source code for bootloader
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 
+CSEG AT 19E0h
+check_bootloader:
+	mov	WDTCN, #0DEh			; Disable watchdog
+	mov	WDTCN, #0ADh		
+    orl RSTSRC, #02h
 
+    cjne A, #0a5h, check_bootloader_startup
+check_bootloader_jump_reset:
+    jmp reset
+check_bootloader_startup:
+    mov dptr, #0fbfdh
+    clr a
+    movc a, @a+dptr
+    cjne a, #0a5h, check_bootloader_jump_reset
+    jmp 0fbc0h
+    
 
 CSEG AT 19FDh                   ;
 reset:

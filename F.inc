@@ -46,35 +46,6 @@ ENDIF
 ;**** **** **** **** ****
 ; Constant definitions
 ;**** **** **** **** ****
-IF MCU_48MHZ == 0
-CSEG AT 1A40h
-IF FETON_DELAY == 0
-Eep_ESC_Layout:		DB	"#F_L_00#        "	; ESC layout tag
-ELSEIF FETON_DELAY == 5
-Eep_ESC_Layout:		DB	"#F_L_05#        "
-ELSEIF FETON_DELAY == 10
-Eep_ESC_Layout:		DB	"#F_L_10#        "
-ELSEIF FETON_DELAY == 15
-Eep_ESC_Layout:		DB	"#F_L_15#        "
-ELSEIF FETON_DELAY == 20
-Eep_ESC_Layout:		DB	"#F_L_20#        "
-ELSEIF FETON_DELAY == 25
-Eep_ESC_Layout:		DB	"#F_L_25#        "
-ELSEIF FETON_DELAY == 30
-Eep_ESC_Layout:		DB	"#F_L_30#        "
-ELSEIF FETON_DELAY == 40
-Eep_ESC_Layout:		DB	"#F_L_40#        "
-ELSEIF FETON_DELAY == 50
-Eep_ESC_Layout:		DB	"#F_L_50#        "
-ELSEIF FETON_DELAY == 70
-Eep_ESC_Layout:		DB	"#F_L_70#        "
-ELSEIF FETON_DELAY == 90
-Eep_ESC_Layout:		DB	"#F_L_90#        "
-ENDIF
-CSEG AT 1A50h
-Eep_ESC_MCU:			DB	"#BLHELI$EFM8B10#"	; Project and MCU tag (16 Bytes)
-
-ELSE
 
 CSEG AT 1A40h
 IF FETON_DELAY == 0
@@ -102,7 +73,7 @@ Eep_ESC_Layout:		DB	"#F_H_90#        "
 ENDIF
 CSEG AT 1A50h
 Eep_ESC_MCU:			DB	"#BLHELI$EFM8B21#"	; Project and MCU tag (16 Bytes)
-ENDIF
+
 
 TEMP_LIMIT			EQU 	49	; Temperature measurement ADC value for which main motor power is limited at 80degC (low byte, assuming high byte is 1)
 TEMP_LIMIT_STEP		EQU	9	; Temperature measurement ADC value increment for another 10degC
