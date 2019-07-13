@@ -2233,7 +2233,22 @@ wait_for_comp_out_start:
     clr Flags0.DEMAG_DETECTED
 
        
-IF  0
+
+
+IF  NK1306 == 0
+    mov Temp2, #25              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
+    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    mov Temp1, A
+    clr C                       
+    subb    A, #25
+    jc  ($+4)
+
+    mov Temp1, #25
+ELSE  
     mov Temp2, #5               ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
     mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
     clr C
@@ -2252,23 +2267,8 @@ IF  0
     clr C                       
     subb    A, #5
     jc  ($+4)
-
     mov Temp1, #5
 ENDIF   
-IF  1
-    mov Temp2, #25              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
-    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
-    mov Temp1, A
-    clr C                       
-    subb    A, #25
-    jc  ($+4)
-
-    mov Temp1, #25
-ENDIF
     jnb Flags1.STARTUP_PHASE, comp_scale_samples
 
     mov Temp1, #27              ; Set many samples during startup, approximately one pwm period
@@ -3070,22 +3070,6 @@ pgm_start:
 
     Set_MCU_Clk_48MHz
     
-IF 0
-    clr IE_EA
-    mov FLKEY, #0a5h
-    mov FLKEY, #0f1h
-
-    orl	PSCTL, #01h			; Set the PSWE bit
-	anl	PSCTL, #0FDh			; Clear the PSEE bit
-
-    
-    mov DPTR, #0FBFFh
-    mov A, #0fdh
-    movx @DPTR, A
-
-    anl PSCTL, #0fch
-    setb IE_EA
-ENDIF
     
     ; Initializing beep
     clr IE_EA           ; Disable interrupts explicitly
