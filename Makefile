@@ -74,7 +74,7 @@ $(OUTPUT_DIR)/JESC_$(1)$(3)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(AX51) $$< \
 		"DEFINE(ESCNO=$(_ESCNO)) " \
                 "DEFINE(MCU_48MHZ=$(_MCU_48MHZ)) "\
-                "DEFINE(NK1306=1) "\
+                "DEFINE(NK1306=0) "\
                 "DEFINE(FETON_DELAY=$(_FETON_DELAY)) "\
                 "OBJECT($$@) "\
                 "$(AX51_FLAGS)" >> $(_LOG) 2>&1; test $$$$? -lt 2 || cat $(_LOG)
