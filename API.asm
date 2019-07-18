@@ -5,7 +5,7 @@
     
 // Service entry points for service detection, initialization, interrupts etc
 
-SERVICE_CURRENT_VERSION EQU 01h
+SERVICE_CURRENT_VERSION EQU 02h
 SERVICE_MAGIC         EQU 03e00h
 SERVICE_VERSION       EQU 03e04h
 SERVICE_START         EQU 0f900h
@@ -20,4 +20,4 @@ DSEG at 70h
 Period_L:             DS  1       ; Low byte of commutation period
 Period_H:             DS  1       ; High byte of commutation period
 Rtx_Mask:             DS  1       ; RTX Pin Mask
-
+DShot_Frame_Thresh:   DS  1       ; Dshot frame length threshold

@@ -383,7 +383,7 @@ DShot_Pwm_Thr:              DS  1       ; DShot pulse width threshold value
 DShot_Timer_Preset:         DS  1       ; DShot timer preset for frame sync detection
 DShot_Frame_Start_L:        DS  1       ; DShot frame start timestamp (lo byte)
 DShot_Frame_Start_H:        DS  1       ; DShot frame start timestamp (hi byte)
-DShot_Frame_Length_Thr:     DS  1       ; DShot frame length criteria (in units of 4 timer 2 ticks)
+DShot_Frame_Length_Thr EQU DShot_Frame_Thresh  ; DShot frame length criteria (in units of 4 timer 2 ticks)
 
     
 ; Indirect addressing data segment. The variables below must be in this sequence
@@ -437,8 +437,8 @@ Temp_Storage:               DS  48      ; Temporary storage
      
                                 ;**** **** **** **** ****
 CSEG AT 1A00h            ; "Eeprom" segment
-EEPROM_FW_MAIN_REVISION     EQU 1      ; Main revision of the firmware
-EEPROM_FW_SUB_REVISION      EQU 3       ; Sub revision of the firmware
+EEPROM_FW_MAIN_REVISION     EQU MAJOR      ; Main revision of the firmware
+EEPROM_FW_SUB_REVISION      EQU MINOR      ; Sub revision of the firmware
 EEPROM_LAYOUT_REVISION      EQU 33      ; Revision of the EEPROM layout
 
 Eep_FW_Main_Revision:       DB  EEPROM_FW_MAIN_REVISION         ; EEPROM firmware main revision number
@@ -632,7 +632,10 @@ Notify_Frame MACRO
     setb SMB0CN0_SI ; Indicate Frame available
 ENDM   
 
-Init_Plugin MACRO
+init_plugin:    
+    clr IE_EA
+    push DPL
+    push DPH
     mov DPTR, #SERVICE_MAGIC
     clr A
     movc A, @A+DPTR
@@ -654,8 +657,10 @@ Init_Plugin MACRO
     sjmp ($+4)
 plugin_notfound:
     clr SERVICE_DETECTED
-    mov DPTR, #0
-ENDM
+    pop DPH
+    pop DPL
+    setb IE_EA
+ret
 
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
@@ -3160,7 +3165,7 @@ bootloader_done:
     mov DPTR, #0 ; some of the pgm calls modify it
     mov TCON, #0 ; timer 0 and 1 and external irq off
     mov Rtx_Mask, #(1 shl RTX_PIN)
-    Init_Plugin
+    call init_plugin
     
                                 ; Reset stall count
     mov Stall_Cnt, #0
@@ -3197,6 +3202,22 @@ bootloader_done:
     mov Rcp_Outside_Range_Cnt, #10      ; Set out of range counter
     call twait100ms                     ; Wait for new RC pulse
     mov DShot_Pwm_Thr, #32              ; Load DShot regular pwm threshold
+    clr C
+    mov A, Rcp_Outside_Range_Cnt            ; Check if pulses were accepted
+    subb    A, #10
+    mov     Dshot_Cmd, #0
+    mov     Dshot_Cmd_Cnt, #0
+    jc  validate_rcp_start
+
+    ; Setup variables for DShot600
+    mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot600)
+    mov DShot_Timer_Preset, #128            ; Load DShot sync timer preset (for DShot600)
+    mov DShot_Pwm_Thr, #20              ; Load DShot qualification pwm threshold (for DShot600)
+    mov DShot_Frame_Length_Thr, #20     ; Load DShot frame length criteria
+    ; Test whether signal is DShot600
+    mov Rcp_Outside_Range_Cnt, #10      ; Set out of range counter
+    call twait100ms                     ; Wait for new RC pulse
+    mov DShot_Pwm_Thr, #16              ; Load DShot regular pwm threshold
     clr C
     mov A, Rcp_Outside_Range_Cnt            ; Check if pulses were accepted
     subb    A, #10
@@ -3243,6 +3264,7 @@ bootloader_done:
     ljmp    init_no_signal
 
 validate_rcp_start:
+    call init_plugin
     ; Validate RC pulse
     call twait3ms                       ; Wait for new RC pulse
     jb  Flags2.RCP_UPDATED, ($+6)       ; Is there an updated RC pulse available - proceed
