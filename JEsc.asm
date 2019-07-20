@@ -492,7 +492,7 @@ Comm_Period4x_H    EQU Period_H
 CSEG AT 1A60h
 Eep_Name:                   DB  "                "              ; Name tag (16 Bytes)
 
-CSEG AT 0A0h
+CSEG AT 0b0h
 Jesc_Name:                   DB  "JESC01          "              ; Name tag (16 Bytes)
 
 End_Wait MACRO
@@ -536,8 +536,17 @@ t3_exit:
 reti
 
 CSEG AT 9bh         ; Timer4 overflow/compare interrupt
-    jmp SERVICE_T4_INT   
-CSEG AT 0b0h            ; Code segment after interrupt vectors 
+    clr TMR4CN0_TF4H
+    cpl RTX_PORT.RTX_PIN
+    xch A, MemPtr
+    xch A, R0
+    mov TMR4H, @R0
+    xch A, R0
+    inc A
+    xch A, MemPtr
+reti
+
+CSEG AT 0c0h            ; Code segment after interrupt vectors 
 ;**** **** **** **** ****
 
 ; Table definitions
@@ -616,7 +625,6 @@ ENDM
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
-//    anl EIE1, #7Fh
     clr IE_EA
     jnb WAIT_ACTIVE, l2
     call SERVICE_BEGIN_WAIT
@@ -624,7 +632,6 @@ local l1, l2
 l1:
     jb WAIT_ACTIVE, l1
 l2:
-//    orl EIE1, #80h
     setb IE_EA
 ENDM    
     
@@ -3119,6 +3126,8 @@ init_no_signal:
     mov Flash_Key_1, #0
     mov Flash_Key_2, #0
     ; Check if input signal is high for more than 15ms
+    mov Temp3, IT01CF
+    mov IT01CF, #(80h+(RTX_PIN SHL 4)+(RTX_PIN))    ; Route RCP input to INT0/1, with INT1 inverted
     mov Temp1, #250
 input_high_check_1:
     mov Temp2, #250
@@ -3128,6 +3137,7 @@ input_high_check_2:
     djnz    Temp1, input_high_check_1
 
     ljmp    1C00h           ; Jump to bootloader
+    mov IT01CF, Temp3
 
 bootloader_done:
     clr IE_EA

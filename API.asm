@@ -21,3 +21,4 @@ Period_L:             DS  1       ; Low byte of commutation period
 Period_H:             DS  1       ; High byte of commutation period
 Rtx_Mask:             DS  1       ; RTX Pin Mask
 DShot_Frame_Thresh:   DS  1       ; Dshot frame length threshold
+MemPtr:               DS  1
