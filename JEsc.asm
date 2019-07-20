@@ -3524,7 +3524,7 @@ dshot_direction_1:
     mov     A, Dshot_Cmd_Cnt
     subb A, #6                  ; Needs to receive it 6 times in a row
     jnc     ($+4)                   ; Same as "jc dont_clear_dshot_cmd"
-    ajmp wait_for_power_on_not_missing
+    ljmp wait_for_power_on_not_missing
 
     mov A, #1
     jnb Flags3.PGM_BIDIR, ($+5)
@@ -3545,7 +3545,7 @@ dshot_direction_2:
     mov     A, Dshot_Cmd_Cnt
     subb A, #6                  ; Needs to receive it 6 times in a row
     jnc     ($+4)                   ; Same as "jc dont_clear_dshot_cmd"
-    ajmp wait_for_power_on_not_missing
+    ljmp wait_for_power_on_not_missing
 
     mov A, #2
     jnb Flags3.PGM_BIDIR, ($+5)
