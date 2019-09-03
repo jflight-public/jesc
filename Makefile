@@ -1,6 +1,6 @@
 # set current revision
-MAJOR ?= 1
-MINOR ?= 5
+MAJOR ?= 2
+MINOR ?= 1
 REVISION ?= $(MAJOR)_$(MINOR)
 
 # targets

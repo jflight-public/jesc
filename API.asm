@@ -5,7 +5,7 @@
     
 // Service entry points for service detection, initialization, interrupts etc
 
-SERVICE_CURRENT_VERSION EQU 02h
+SERVICE_CURRENT_VERSION EQU 03h
 SERVICE_MAGIC         EQU 03e00h
 SERVICE_VERSION       EQU 03e04h
 SERVICE_START         EQU 0f900h
