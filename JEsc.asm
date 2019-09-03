@@ -292,7 +292,6 @@ Flags0:                 DS  1       ; State flags. Reset upon init_start
 DEMAG_DETECTED          EQU     0       ; Set when excessive demag time is detected
 COMP_TIMED_OUT          EQU     1       ; Set when comparator reading timed out
 
-
 Flags1:                 DS  1       ; State flags. Reset upon init_start 
 STARTUP_PHASE           EQU     0       ; Set when in startup phase
 INITIAL_RUN_PHASE       EQU     1       ; Set when in initial run phase, before synchronized run is achieved
@@ -300,7 +299,7 @@ MOTOR_STARTED           EQU     2       ; Set when motor is started
 DIR_CHANGE_BRAKE        EQU     3       ; Set when braking before direction change
 HIGH_RPM                EQU     4       ; Set when motor rpm is high (Comm_Period4x_H less than 2)
 WAIT_ACTIVE             BIT Flags1.5    ; Set if set timeout hasn't triggered yet
-
+    
 Flags2:                 DS  1       ; State flags. NOT reset upon init_start
 RCP_UPDATED             EQU     0       ; New RC pulse length value available
 RCP_DIR_REV             EQU     1       ; RC pulse direction in bidirectional mode
@@ -501,7 +500,6 @@ local l1
     jmp SERVICE_END_WAIT
 l1: 
 ENDM    
-    
 
 ;**** **** **** **** ****
 CSEG AT 0               ; Code segment start
@@ -940,7 +938,9 @@ t1_int_not_bidir:
 t1_int_startup_boost_stall:
     mov A, Stall_Cnt                    ; Add an extra power boost during start
     swap    A
+IF PWM48 != 1
     rlc A
+ENDIF    
     add A, Temp3
     mov Temp3, A
     mov A, Temp4
@@ -969,6 +969,15 @@ t1_int_startup_boosted:
     mov Temp1, #1
 
 t1_int_zero_rcp_checked:
+IF PWM48 == 1
+ 	clr	C
+	mov	A, Temp4
+	rrc	A
+	mov	Temp4, A
+	mov	A, Temp3
+	rrc	A
+	mov	Temp3, A
+ENDIF    
     mov DPTR, #0                    ; Set pointer to start
     ; Decrement outside range counter
     mov A, Rcp_Outside_Range_Cnt
@@ -1125,7 +1134,11 @@ int0_int_pulse_ready:
     jnc int0_int_set_pwm_registers
 
     mov A, Temp5                        ; Multiply limit by 4 (8 for 48MHz MCUs)
+IF PWM48 != 1
     mov B, #8
+ELSE
+    mov B, #4
+ENDIF    
 
     mul AB
     mov Temp3, A
@@ -1137,12 +1150,20 @@ int0_int_set_pwm_registers:
     mov Temp1, A
     mov A, Temp4
     cpl A
+IF PWM48 != 1
     anl A, #7
+ELSE
+    anl A, #3
+ENDIF    
     mov Temp2, A
 IF FETON_DELAY != 0
     clr C
     mov A, Temp1                        ; Skew damping fet timing
+IF PWM48 != 1
     subb    A, #(FETON_DELAY SHL 1)
+ELSE
+    subb    A, #(FETON_DELAY)
+ENDIF    
     mov Temp3, A
     mov A, Temp2
     subb    A, #0   
@@ -1167,7 +1188,11 @@ IF FETON_DELAY != 0
     jmp int0_int_schedule_pca
 ELSE
     mov A, Current_Power_Pwm_Reg_H
+IF PWM48 != 1
     jnb ACC.2, int0_int_set_pca_int_hi_pwm
+ELSE
+    jnb ACC.1, int0_int_set_pca_int_hi_pwm
+ENDIF    
 
     Clear_COVF_Interrupt
     Enable_COVF_Interrupt               ; Generate a pca interrupt
@@ -1236,10 +1261,21 @@ IF FETON_DELAY != 0                 ; HI/LO enable style drivers
 
     mov Temp1, PCA0L                ; Read low byte, to transfer high byte to holding register
     mov A, Current_Power_Pwm_Reg_H
+IF PWM48 != 1
     jnb ACC.2, pca_int_hi_pwm
+ELSE    
+    jnb ACC.1, pca_int_hi_pwm
+ENDIF    
     mov A, PCA0H
+IF PWM48 != 1
     jb  ACC.2, pca_int_exit
     jb  ACC.1, pca_int_exit
+ELSE
+    jb  ACC.1, pca_int_exit
+    jb  ACC.0, pca_int_exit
+ENDIF
+    
+    
     ajmp    pca_int_set_pwm
 
 pca_int_hi_pwm:
@@ -3158,6 +3194,9 @@ bootloader_done:
     clr WAIT_ACTIVE
     
     Initialize_PCA          ; Initialize PCA
+IF PWM48 == 1
+    dec PCA0PWM				; Double PWM frequency
+ENDIF    
     Set_Pwm_Polarity        ; Set pwm polarity
     Enable_Power_Pwm_Module ; Enable power pwm module
     Enable_Damp_Pwm_Module  ; Enable damping pwm module
@@ -3950,12 +3989,12 @@ run_to_wait_for_power_on:
 run_to_wait_for_power_on_stall_done:
     clr IE_EA
     call switch_power_off
-    mov Flags0, #0              ; Clear flags0
     mov Flags1, #0              ; Clear flags1
 
     setb IE_EA
-    call    wait100ms                   ; Wait for pwm to be stopped
+    call    twait100ms                   ; Wait for pwm to be stopped
     call switch_power_off
+    mov Flags0, #0              ; Clear flags0
     mov Temp1, #Pgm_Brake_On_Stop
     mov A, @Temp1
     jz  run_to_wait_for_power_on_brake_done

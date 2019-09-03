@@ -1,17 +1,18 @@
 # set current revision
 MAJOR ?= 1
-MINOR ?= 4
+MINOR ?= 5
 REVISION ?= $(MAJOR)_$(MINOR)
 
 # targets
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
 MCUS         = H
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90
+PWMS         = 24 48
 
 # example single target
-VARIANT     ?= F
+VARIANT     ?= J
 MCU         ?= H
-FETON_DELAY ?= 40
+FETON_DELAY ?= 15
 
 # configure the script to use the wine installation delivered with
 # SimplicityStudio. these wine settings are quite important. if you get
@@ -62,14 +63,15 @@ space := $(blank) $(blank)
 $(space) := $(space)
 
 define MAKE_OBJ
-OBJS += $(OUTPUT_DIR)/JESC_$(1)$(3)_$(REVISION).OBJ 
-$(OUTPUT_DIR)/JESC_$(1)$(3)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
+OBJS += $(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ 
+$(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(eval _ESC         := $(1))
 	$(eval _ESC_INT     := $(shell printf "%d" "'${_ESC}"))
 	$(eval _ESCNO       := $(shell echo $$(( $(_ESC_INT) - 65 + 1))))
-        $(eval _MCU_48MHZ   := $(subst L,0,$(subst H,1,$(2))))
+    $(eval _MCU_48MHZ   := $(subst L,0,$(subst H,1,$(2))))
+    $(eval _PWM48       := $(subst 24,0,$(subst 48,1,$(4))))
 	$(eval _FETON_DELAY := $(3))
-	$(eval _LOG         := $(LOG_DIR)/$(1)_$(2)_$(3)_$(REVISION).log)
+	$(eval _LOG         := $(LOG_DIR)/$(1)$(3)_$(4)_$(REVISION).log)
 	@mkdir -p $(OUTPUT_DIR)
 	@mkdir -p $(LOG_DIR)
 	@echo "AX51 : $$<"
@@ -77,6 +79,7 @@ $(OUTPUT_DIR)/JESC_$(1)$(3)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 		"DEFINE(ESCNO=$(_ESCNO)) " \
                 "DEFINE(MCU_48MHZ=$(_MCU_48MHZ)) "\
                 "DEFINE(NK1306=0) "\
+                "DEFINE(PWM48=$(_PWM48)) "\
                 "DEFINE(FETON_DELAY=$(_FETON_DELAY)) "\
                 "DEFINE(MAJOR=$(MAJOR)) "\
                 "DEFINE(MINOR=$(MINOR)) "\
@@ -91,7 +94,7 @@ EFM8_LOAD_BIN  ?= efm8load.py
 EFM8_LOAD_PORT ?= /dev/ttyUSB0
 EFM8_LOAD_BAUD ?= 57600
 
-SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_$(REVISION).HEX
+SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_24_$(REVISION).HEX
 
 single_target : $(SINGLE_TARGET_HEX)
 
@@ -102,7 +105,8 @@ all : $$(HEX_TARGETS)
 $(foreach _e,$(TARGETS), \
 	$(foreach _m, $(MCUS), \
 		$(foreach _f, $(FETON_DELAYS), \
-			$(eval $(call MAKE_OBJ,$(_e),$(_m),$(_f))))))
+	        $(foreach _p, $(PWMS), \
+			    $(eval $(call MAKE_OBJ,$(_e),$(_m),$(_f),$(_p)))))))
 
 
 $(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ 
