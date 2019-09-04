@@ -654,6 +654,8 @@ init_plugin:
     movc A, @A+DPTR
     cjne A, #'X', plugin_notfound
     inc DPTR
+    inc DPTR
+    inc DPTR
     clr A
     movc A, @A+DPTR
     cjne A, #SERVICE_CURRENT_VERSION, plugin_notfound
