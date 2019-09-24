@@ -972,7 +972,7 @@ t1_int_startup_boosted:
 
 t1_int_zero_rcp_checked:
 IF PWM48 == 1
- 	clr	C
+    clr	C
 	mov	A, Temp4
 	rrc	A
 	mov	Temp4, A
@@ -1161,11 +1161,7 @@ ENDIF
 IF FETON_DELAY != 0
     clr C
     mov A, Temp1                        ; Skew damping fet timing
-IF PWM48 != 1
-    subb    A, #(FETON_DELAY SHL 1)
-ELSE
-    subb    A, #(FETON_DELAY)
-ENDIF    
+    subb    A, #(FETON_DELAY SHL 1)     ; Use FETON_DELAY SHL 1 even for 48khz since dead time is absolute
     mov Temp3, A
     mov A, Temp2
     subb    A, #0   
@@ -1282,8 +1278,13 @@ ENDIF
 
 pca_int_hi_pwm:
     mov A, PCA0H
+IF PWM48 != 1
     jnb ACC.2, pca_int_exit
     jb  ACC.1, pca_int_exit
+ELSE
+    jnb	ACC.1, pca_int_exit			; Power above 50%, update pca in the 0x20-0x2F range
+	jb	ACC.0, pca_int_exit
+ENDIF    
 
 pca_int_set_pwm:
     Set_Power_Pwm_Regs
