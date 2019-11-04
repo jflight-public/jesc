@@ -6,7 +6,7 @@ REVISION ?= $(MAJOR)_$(MINOR)
 # targets
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
 MCUS         = H
-FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90
+FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
 PWMS         = 24 48
 
 # example single target
@@ -78,7 +78,7 @@ $(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(AX51) $$< \
 		"DEFINE(ESCNO=$(_ESCNO)) " \
                 "DEFINE(MCU_48MHZ=$(_MCU_48MHZ)) "\
-                "DEFINE(NK1306=0) "\
+                "DEFINE(NK1306=1) "\
                 "DEFINE(PWM48=$(_PWM48)) "\
                 "DEFINE(FETON_DELAY=$(_FETON_DELAY)) "\
                 "DEFINE(MAJOR=$(MAJOR)) "\
@@ -94,7 +94,7 @@ EFM8_LOAD_BIN  ?= efm8load.py
 EFM8_LOAD_PORT ?= /dev/ttyUSB0
 EFM8_LOAD_BAUD ?= 57600
 
-SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_24_$(REVISION).HEX
+SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_48_$(REVISION).HEX
 
 single_target : $(SINGLE_TARGET_HEX)
 
