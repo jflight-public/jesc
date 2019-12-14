@@ -1176,8 +1176,13 @@ ENDIF
     mov Power_Pwm_Reg_L, Temp1
     mov Power_Pwm_Reg_H, Temp2
 IF FETON_DELAY != 0
+IF NO_DAMPING == 1
+    mov Damp_Pwm_Reg_L, #0h
+    mov Damp_Pwm_Reg_H, #0h
+ELSE    
     mov Damp_Pwm_Reg_L, Temp3
     mov Damp_Pwm_Reg_H, Temp4
+ENDIF    
 ENDIF
     mov Rcp_Timeout_Cntd, #10           ; Set timeout count
 IF FETON_DELAY != 0
