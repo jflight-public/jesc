@@ -78,7 +78,7 @@ $(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(AX51) $$< \
 		"DEFINE(ESCNO=$(_ESCNO)) " \
                 "DEFINE(MCU_48MHZ=$(_MCU_48MHZ)) "\
-                "DEFINE(NK1306=0) DEFINE(NO_DAMPING=1)"\
+                "DEFINE(NK1306=0)"\
                 "DEFINE(PWM48=$(_PWM48)) "\
                 "DEFINE(FETON_DELAY=$(_FETON_DELAY)) "\
                 "DEFINE(MAJOR=$(MAJOR)) "\
