@@ -10,9 +10,9 @@ FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
 PWMS         = 24 48
 
 # example single target
-VARIANT     ?= F
+VARIANT     ?= J
 MCU         ?= H
-FETON_DELAY ?= 40
+FETON_DELAY ?= 15
 
 # configure the script to use the wine installation delivered with
 # SimplicityStudio. these wine settings are quite important. if you get
@@ -94,7 +94,7 @@ EFM8_LOAD_BIN  ?= efm8load.py
 EFM8_LOAD_PORT ?= /dev/ttyUSB0
 EFM8_LOAD_BAUD ?= 57600
 
-SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_48_$(REVISION).HEX
+SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_24_$(REVISION).HEX
 
 single_target : $(SINGLE_TARGET_HEX)
 

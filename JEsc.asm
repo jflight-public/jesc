@@ -383,7 +383,8 @@ DShot_Timer_Preset:         DS  1       ; DShot timer preset for frame sync dete
 DShot_Frame_Start_L:        DS  1       ; DShot frame start timestamp (lo byte)
 DShot_Frame_Start_H:        DS  1       ; DShot frame start timestamp (hi byte)
 DShot_Frame_Length_Thr EQU DShot_Frame_Thresh  ; DShot frame length criteria (in units of 4 timer 2 ticks)
-
+DShot_Byte:                 DS  1
+    
     
 ; Indirect addressing data segment. The variables below must be in this sequence
 ISEG AT 080h                    
@@ -505,6 +506,7 @@ ENDM
 CSEG AT 0               ; Code segment start
     jmp check_bootloader
 CSEG AT 03h         ; Int0 interrupt    
+    mov DShot_Byte, TL0
     jmp int0_int    
 CSEG AT 0Bh         ; Timer0 overflow interrupt
     jmp SERVICE_T0_INT
@@ -623,14 +625,18 @@ ENDM
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
-    clr IE_EA
+;    clr IE_EA
+    anl EIE1, #07fh
+;    setb IE_EA
     jnb WAIT_ACTIVE, l2
+;    setb IE_EA
     call SERVICE_BEGIN_WAIT
     mov SFRPAGE, #0
 l1:
     jb WAIT_ACTIVE, l1
 l2:
-    setb IE_EA
+;     orl EIE1, #80h
+;    setb IE_EA
 ENDM    
     
 Notify_Frame MACRO  
@@ -1085,7 +1091,7 @@ ENDIF
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 int0_int:   ; Used for RC pulse timing
     push    ACC
-    mov A, TL0          ; Read pwm for DShot immediately
+    mov A, DShot_Byte          ; Read pwm for DShot immediately
 
     mov TL1, DShot_Timer_Preset ; Reset sync timer
     movx    @DPTR, A            ; Store pwm
