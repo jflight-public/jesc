@@ -2108,7 +2108,7 @@ store_times_up_or_down:
     mov A, Temp8                
     subb    A, #3                   ; Is timing higher than normal?
     jc  store_times_decrease        ; No - branch
-
+
 store_times_increase:
     mov Wt_Comm_Start_L, Temp3      ; Now commutation time (~60deg) divided by 4 (~15deg nominal)
     mov Wt_Comm_Start_H, Temp4
@@ -2444,7 +2444,6 @@ comp_read_ok:
 comp_read_ok_jmp:
     ajmp    comp_check_timeout
 
-    clr P2.DebugPin
     clr Flags0.COMP_TIMED_OUT
 
 
@@ -2458,6 +2457,7 @@ comp_read_ok_jmp:
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 setup_comm_wait:
+    clr P2.DebugPin
     clr IE_EA
     anl EIE1, #7Fh      ; Disable timer 3 interrupts
     mov TMR3CN0, #00h       ; Timer 3 disabled and interrupt flag cleared
