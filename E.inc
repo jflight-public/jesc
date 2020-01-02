@@ -39,72 +39,6 @@ $include (SI_EFM8BB2_Defs.inc)
 ENDIF
 
 
-;**** **** **** **** ****
-; Uses internal calibrated oscillator set to 24/48Mhz
-;**** **** **** **** ****
-
-;**** **** **** **** ****
-; Constant definitions
-;**** **** **** **** ****
-IF MCU_48MHZ == 0
-CSEG AT 1A40h
-IF FETON_DELAY == 0
-Eep_ESC_Layout:		DB	"#E_L_00#        "	; ESC layout tag
-ELSEIF FETON_DELAY == 5
-Eep_ESC_Layout:		DB	"#E_L_05#        "
-ELSEIF FETON_DELAY == 10
-Eep_ESC_Layout:		DB	"#E_L_10#        "
-ELSEIF FETON_DELAY == 15
-Eep_ESC_Layout:		DB	"#E_L_15#        "
-ELSEIF FETON_DELAY == 20
-Eep_ESC_Layout:		DB	"#E_L_20#        "
-ELSEIF FETON_DELAY == 25
-Eep_ESC_Layout:		DB	"#E_L_25#        "
-ELSEIF FETON_DELAY == 30
-Eep_ESC_Layout:		DB	"#E_L_30#        "
-ELSEIF FETON_DELAY == 40
-Eep_ESC_Layout:		DB	"#E_L_40#        "
-ELSEIF FETON_DELAY == 50
-Eep_ESC_Layout:		DB	"#E_L_50#        "
-ELSEIF FETON_DELAY == 70
-Eep_ESC_Layout:		DB	"#E_L_70#        "
-ELSEIF FETON_DELAY == 90
-Eep_ESC_Layout:		DB	"#E_L_90#        "
-ENDIF
-CSEG AT 1A50h
-Eep_ESC_MCU:			DB	"#BLHELI$EFM8B10#"	; Project and MCU tag (16 Bytes)
-
-ELSE
-
-CSEG AT 1A40h
-IF FETON_DELAY == 0
-Eep_ESC_Layout:		DB	"#E_H_00#        "	; ESC layout tag
-ELSEIF FETON_DELAY == 5
-Eep_ESC_Layout:		DB	"#E_H_05#        "
-ELSEIF FETON_DELAY == 10
-Eep_ESC_Layout:		DB	"#E_H_10#        "
-ELSEIF FETON_DELAY == 15
-Eep_ESC_Layout:		DB	"#E_H_15#        "
-ELSEIF FETON_DELAY == 20
-Eep_ESC_Layout:		DB	"#E_H_20#        "
-ELSEIF FETON_DELAY == 25
-Eep_ESC_Layout:		DB	"#E_H_25#        "
-ELSEIF FETON_DELAY == 30
-Eep_ESC_Layout:		DB	"#E_H_30#        "
-ELSEIF FETON_DELAY == 40
-Eep_ESC_Layout:		DB	"#E_H_40#        "
-ELSEIF FETON_DELAY == 50
-Eep_ESC_Layout:		DB	"#E_H_50#        "
-ELSEIF FETON_DELAY == 70
-Eep_ESC_Layout:		DB	"#E_H_70#        "
-ELSEIF FETON_DELAY == 90
-Eep_ESC_Layout:		DB	"#E_H_90#        "
-ELSEIF FETON_DELAY == 120
-Eep_ESC_Layout:		DB	"#E_H_120#       "
-ENDIF
-CSEG AT 1A50h
-Eep_ESC_MCU:			DB	"#BLHELI$EFM8B21#"	; Project and MCU tag (16 Bytes)
-ENDIF
 
 TEMP_LIMIT			EQU 	49	; Temperature measurement ADC value for which main motor power is limited at 80degC (low byte, assuming high byte is 1)
 TEMP_LIMIT_STEP		EQU	9	; Temperature measurement ADC value increment for another 10degC
@@ -142,25 +76,6 @@ P0_INIT		EQU	NOT((1 SHL LED_0)+(1 SHL LED_1))
 P0_PUSHPULL	EQU	(1 SHL LED_0)+(1 SHL LED_1)
 P0_SKIP		EQU	0FFh
 
-Initialize_PCA MACRO
-	mov	PCA0CN0, #40h				; PCA enabled
-	mov	PCA0MD, #08h				; PCA clock is system clock
-IF FETON_DELAY == 0
-IF MCU_48MHZ == 0
-	mov	PCA0PWM, #82h				; PCA ARSEL set and 10bits pwm
-ELSE
-	mov	PCA0PWM, #83h				; PCA ARSEL set and 11bits pwm
-ENDIF
-	mov	PCA0CENT, #00h				; Edge aligned pwm
-ELSE
-IF MCU_48MHZ == 0
-	mov	PCA0PWM, #81h				; PCA ARSEL set and 9bits pwm
-ELSE
-	mov	PCA0PWM, #82h				; PCA ARSEL set and 10bits pwm
-ENDIF
-	mov	PCA0CENT, #03h				; Center aligned pwm
-ENDIF
-ENDM
 Set_Pwm_Polarity MACRO
 	mov	PCA0POL, #02h				; Damping inverted, pwm noninverted
 ENDM
@@ -178,36 +93,6 @@ ELSE
 	mov	PCA0CPM1, #42h				; Enable comparator of module, set pwm mode
 ENDIF
 ENDM
-Set_Power_Pwm_Regs MACRO
-IF FETON_DELAY == 0
-	mov	PCA0CPL0, Power_Pwm_Reg_L
-	mov	PCA0CPH0, Power_Pwm_Reg_H
-ELSE
-	clr	C
-	mov	A, Power_Pwm_Reg_H
-	rrc	A
-	mov	Temp1, A
-	mov	A, Power_Pwm_Reg_L
-	rrc	A
-	mov	PCA0CPL0, A
-	mov	PCA0CPH0, Temp1
-ENDIF
-ENDM		
-Set_Damp_Pwm_Regs MACRO
-IF FETON_DELAY == 0
-	mov	PCA0CPL1, Damp_Pwm_Reg_L
-	mov	PCA0CPH1, Damp_Pwm_Reg_H
-ELSE
-	clr	C
-	mov	A, Damp_Pwm_Reg_H
-	rrc	A
-	mov	Temp1, A
-	mov	A, Damp_Pwm_Reg_L
-	rrc	A
-	mov	PCA0CPL1, A
-	mov	PCA0CPH1, Temp1
-ENDIF
-ENDM		
 Clear_COVF_Interrupt MACRO
 	anl	PCA0PWM, #0DFh
 ENDM

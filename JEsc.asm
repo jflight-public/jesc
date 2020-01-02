@@ -113,6 +113,9 @@ V_          EQU 22  ; Cc X  RC X  MC CC MB MA    X  Ap Ac Bp X  X  Bc Cp
 W_                      EQU 23  ; RC MC MB X  CC MA X X      X  Ap Bp Cp X  X  X  X     Tristate gate driver
 
 
+;                     VBAT CUR L0 RC CC MB MC MA    Tlm Cc Bc Ac Cp Bp Ap
+
+    
 ;**** **** **** **** ****
 ; Select the port mapping to use (or unselect all for use with external batch compile file)
 ;ESCNO EQU A_
@@ -154,96 +157,187 @@ $include (API.asm)
 ; ESC selection statements
 IF ESCNO == A_
 $include (A.inc)    ; Select pinout A
+LAYOUT_TAG EQU "A"
 ENDIF
 
 IF ESCNO == B_
 $include (B.inc)    ; Select pinout B
+LAYOUT_TAG EQU "B"
 ENDIF
 
 IF ESCNO == C_
 $include (C.inc)    ; Select pinout C
+LAYOUT_TAG EQU "C"
 ENDIF
 
 IF ESCNO == D_
 $include (D.inc)    ; Select pinout D
+LAYOUT_TAG EQU "D"
 ENDIF
 
 IF ESCNO == E_
 $include (E.inc)    ; Select pinout E
+LAYOUT_TAG EQU "E"
 ENDIF
 
 IF ESCNO == F_
 $include (F.inc)    ; Select pinout F
+LAYOUT_TAG EQU "F"
 ENDIF
 
 IF ESCNO == G_
 $include (G.inc)    ; Select pinout G
+LAYOUT_TAG EQU "G"
 ENDIF
 
 IF ESCNO == H_
 $include (H.inc)    ; Select pinout H
+LAYOUT_TAG EQU "H"
 ENDIF
 
 IF ESCNO == I_
 $include (I.inc)    ; Select pinout I
+LAYOUT_TAG EQU "I"
 ENDIF
 
 IF ESCNO == J_
 $include (J.inc)    ; Select pinout J
+LAYOUT_TAG EQU "J"
 ENDIF
 
 IF ESCNO == K_
 $include (K.inc)    ; Select pinout K
+LAYOUT_TAG EQU "K"
 ENDIF
 
 IF ESCNO == L_
 $include (L.inc)    ; Select pinout L
+LAYOUT_TAG EQU "L"
 ENDIF
 
 IF ESCNO == M_
 $include (M.inc)    ; Select pinout M
+LAYOUT_TAG EQU "M"
 ENDIF
 
 IF ESCNO == N_
 $include (N.inc)    ; Select pinout N
+LAYOUT_TAG EQU "N"
 ENDIF
 
 IF ESCNO == O_
 $include (O.inc)    ; Select pinout O
+LAYOUT_TAG EQU "O"
 ENDIF
 
 IF ESCNO == P_
 $include (P.inc)    ; Select pinout P
+LAYOUT_TAG EQU "P"
 ENDIF
 
 IF ESCNO == Q_
 $include (Q.inc)    ; Select pinout Q
+LAYOUT_TAG EQU "Q"
 ENDIF
 
 IF ESCNO == R_
 $include (R.inc)    ; Select pinout R
+LAYOUT_TAG EQU "R"
 ENDIF
 
 IF ESCNO == S_
 $include (S.inc)        ; Select pinout S
+LAYOUT_TAG EQU "S"
 ENDIF
 
 IF ESCNO == T_
 $include (T.inc)        ; Select pinout T
+LAYOUT_TAG EQU "T"
 ENDIF
 
 IF ESCNO == U_
 $include (U.inc)        ; Select pinout U
+LAYOUT_TAG EQU "U"
 ENDIF
 
 IF ESCNO == V_
 $include (V.inc)        ; Select pinout V
+LAYOUT_TAG EQU "V"
 ENDIF
 
 IF ESCNO == W_
 $include (W.inc)        ; Select pinout W
+LAYOUT_TAG EQU "W"
 ENDIF
 
+;**** **** **** **** ****
+; Uses internal calibrated oscillator set to 24/48Mhz
+;**** **** **** **** ****
+
+;**** **** **** **** ****
+; Constant definitions
+;**** **** **** **** ****
+
+
+IF MCU_48MHZ == 0
+MCU_TAG EQU "L"
+ELSE
+MCU_TAG EQU "H"
+ENDIF
+
+IF FETON_DELAY == 0
+DELAY_TAG EQU "00"
+ELSEIF FETON_DELAY == 5
+DELAY_TAG EQU "05"
+ELSEIF FETON_DELAY == 10
+DELAY_TAG EQU "10"
+ELSEIF FETON_DELAY == 15
+DELAY_TAG EQU "15"
+ELSEIF FETON_DELAY == 20
+DELAY_TAG EQU "20"
+ELSEIF FETON_DELAY == 25
+DELAY_TAG EQU "25"
+ELSEIF FETON_DELAY == 30
+DELAY_TAG EQU "30"
+ELSEIF FETON_DELAY == 40
+DELAY_TAG EQU "40"
+ELSEIF FETON_DELAY == 50
+DELAY_TAG EQU "50"
+ELSEIF FETON_DELAY == 70
+DELAY_TAG EQU "70"
+ELSEIF FETON_DELAY == 90
+DELAY_TAG EQU "90"
+ELSEIF FETON_DELAY == 120
+DELAY_TAG EQU "120"
+ENDIF
+
+IF PWM == 24
+PWM_TAG EQU "24"    
+ELSEIF PWM == 48
+PWM_TAG EQU "48"    
+ELSEIF PWM == 96
+PWM_TAG EQU "96"    
+ENDIF
+
+CSEG AT 1A40h
+Eep_ESC_Layout:
+    DB "#"
+    DB LAYOUT_TAG
+    DB "_"
+    DB MCU_TAG
+    DB "_"
+    DB DELAY_TAG
+    DB "#       "	; ESC layout tag
+
+
+IF MCU_48MHZ == 1
+CSEG AT 1A50h
+Eep_ESC_MCU:			DB	"#BLHELI$EFM8B21#"	; Project and MCU tag (16 Bytes)
+ELSE
+CSEG AT 1A50h
+Eep_ESC_MCU:			DB	"#BLHELI$EFM8B10#"	; Project and MCU tag (16 Bytes)
+ENDIF
+    
 
 ;**** **** **** **** ****
 ; Programming defaults
@@ -268,6 +362,15 @@ DEFAULT_PGM_LED_CONTROL             EQU 0   ; Byte for LED control. 2bits per LE
 
 ;**** **** **** **** ****
 ; Temporary register definitions
+ATemp1       EQU AR0
+ATemp2       EQU AR1
+ATemp3       EQU AR2
+ATemp4       EQU AR3
+ATemp5       EQU AR4
+ATemp6       EQU AR5
+ATemp7       EQU AR6
+ATemp8       EQU AR7
+
 Temp1       EQU R0
 Temp2       EQU R1
 Temp3       EQU R2
@@ -382,6 +485,7 @@ DShot_Pwm_Thr:              DS  1       ; DShot pulse width threshold value
 DShot_Timer_Preset:         DS  1       ; DShot timer preset for frame sync detection
 DShot_Frame_Start_L:        DS  1       ; DShot frame start timestamp (lo byte)
 DShot_Frame_Start_H:        DS  1       ; DShot frame start timestamp (hi byte)
+Dither_Cur_Bit:             DS  1
 DShot_Frame_Length_Thr EQU DShot_Frame_Thresh  ; DShot frame length criteria (in units of 4 timer 2 ticks)
 
     
@@ -492,7 +596,9 @@ CSEG AT 1A60h
 Eep_Name:                   DB  "                "              ; Name tag (16 Bytes)
 
 CSEG AT 0b0h
-Jesc_Name:                   DB  "JESC01          "              ; Name tag (16 Bytes)
+Jesc_Name:                   DB  "JESC01 #"
+    DB PWM_TAG
+    DB "       "            ; Name tag (16 Bytes)
 
 End_Wait MACRO
 local l1
@@ -503,7 +609,11 @@ ENDM
 
 ;**** **** **** **** ****
 CSEG AT 0               ; Code segment start
+IF MCU_48MHZ == 1
     jmp check_bootloader
+ELSE
+    jmp reset
+ENDIF    
 CSEG AT 03h         ; Int0 interrupt    
     jmp int0_int    
 CSEG AT 0Bh         ; Timer0 overflow interrupt
@@ -533,6 +643,7 @@ t3_int: ; Used for commutation timing
 t3_exit:    
 reti
 
+IF MCU_48MHZ == 1
 CSEG AT 9bh         ; Timer4 overflow/compare interrupt
     clr TMR4CN0_TF4H
     cpl RTX_PORT.RTX_PIN
@@ -544,11 +655,41 @@ CSEG AT 9bh         ; Timer4 overflow/compare interrupt
     xch A, MemPtr
 reti
 
-CSEG AT 0c0h            ; Code segment after interrupt vectors 
+ENDIF
+
 ;**** **** **** **** ****
 
+    
 ; Table definitions
 STARTUP_POWER_TABLE:    DB  04h, 06h, 08h, 0Ch, 10h, 18h, 20h, 30h, 40h, 60h, 80h, 0A0h, 0C0h
+
+
+IF PWM == 24
+    D_BITS_PWM EQU 0
+ELSEIF PWM == 48
+    D_BITS_PWM EQU 1
+ELSEIF PWM == 96
+    D_BITS_PWM EQU 2
+ENDIF
+    
+IF MCU_48MHZ == 1
+    D_BITS_MCU EQU 0
+    FDELAY_SHIFT EQU 0
+ELSE    
+    D_BITS_MCU EQU 1
+    FDELAY_SHIFT EQU 1
+ENDIF    
+
+IF FETON_DELAY != 0
+    D_BITS_FET EQU 1
+ELSE
+    D_BITS_FET EQU 0
+ENDIF
+    
+    
+D_BITS EQU (D_BITS_PWM + D_BITS_MCU + D_BITS_FET)
+CYCLE_OVFL_BIT EQU (3 - D_BITS)
+
 
 Set_MCU_Clk_24MHz MACRO
     mov CLKSEL, #13h        ; Set clock to 24MHz
@@ -562,6 +703,17 @@ Set_MCU_Clk_48MHz MACRO
     mov SFRPAGE, #00h
     mov CLKSEL, #03h        ; Set clock to 48MHz
 ENDM
+
+Initialize_PCA MACRO
+	mov	PCA0CN0, #40h				; PCA enabled
+	mov	PCA0MD, #08h				; PCA clock is system clock
+    mov PCA0PWM, #(83h - D_BITS)
+IF FETON_DELAY == 0
+	mov	PCA0CENT, #00h				; Edge aligned pwm
+ELSE
+	mov	PCA0CENT, #03h				; Center aligned pwm
+ENDIF
+ENDM    
 
 Decode_Dshot_2Msb MACRO
 	movx	A, @DPTR
@@ -711,6 +863,7 @@ t1_int:
     rrc A
     mov Temp1, A
 
+IF MCU_48MHZ == 1
     clr C
     mov A, Temp2
     rrc A
@@ -718,7 +871,8 @@ t1_int:
     mov A, Temp1
     rrc A
     mov Temp1, A
-
+ENDIF
+    
     mov A, Temp2
     jnz t1_int_msb_fail ; Frame too long
     mov A, Temp1
@@ -940,9 +1094,7 @@ t1_int_not_bidir:
 t1_int_startup_boost_stall:
     mov A, Stall_Cnt                    ; Add an extra power boost during start
     swap    A
-IF PWM48 != 1
     rlc A
-ENDIF    
     add A, Temp3
     mov Temp3, A
     mov A, Temp4
@@ -971,15 +1123,6 @@ t1_int_startup_boosted:
     mov Temp1, #1
 
 t1_int_zero_rcp_checked:
-IF PWM48 == 1
-    clr	C
-	mov	A, Temp4
-	rrc	A
-	mov	Temp4, A
-	mov	A, Temp3
-	rrc	A
-	mov	Temp3, A
-ENDIF    
     mov DPTR, #0                    ; Set pointer to start
     ; Decrement outside range counter
     mov A, Rcp_Outside_Range_Cnt
@@ -1010,6 +1153,7 @@ t2_int: ; Happens every 32ms
     clr TMR2CN0_TF2H                ; Clear interrupt flag
     inc Timer2_X
 
+IF MCU_48MHZ == 1
     ; Check skip variable
     mov A, Skip_T2_Int
     jz  t2_int_start                ; Execute this interrupt
@@ -1019,7 +1163,8 @@ t2_int: ; Happens every 32ms
 
 t2_int_start:
     mov Skip_T2_Int, #1         ; Skip next interrupt
-
+ENDIF
+    
     ; Update RC pulse timeout counter 
     mov A, Rcp_Timeout_Cntd         ; RC pulse timeout count zero?
     jz  ($+4)                   ; Yes - do not decrement
@@ -1136,32 +1281,92 @@ int0_int_pulse_ready:
     jnc int0_int_set_pwm_registers
 
     mov A, Temp5                        ; Multiply limit by 4 (8 for 48MHz MCUs)
-IF PWM48 != 1
     mov B, #8
-ELSE
-    mov B, #4
-ENDIF    
 
     mul AB
     mov Temp3, A
     mov Temp4, B
 
 int0_int_set_pwm_registers:
-    mov A, Temp3
-    cpl A
-    mov Temp1, A
+    
+IF D_BITS == 1
     mov A, Temp4
     cpl A
-IF PWM48 != 1
-    anl A, #7
-ELSE
+    rrc A
     anl A, #3
-ENDIF    
     mov Temp2, A
+    mov A, Temp3
+    cpl A
+    mov Temp5, A
+    rrc A
+    mov Temp1, A
+
+ELSEIF D_BITS == 2
+    mov A, Temp4
+    cpl A
+    rrc A
+    rrc A
+    mov PSW_F0, C
+    mov C, ACC.7
+    anl A, #1
+    mov Temp2, A
+    mov A, Temp3
+    cpl A
+    mov Temp5, A
+    rrc A
+    mov C, PSW_F0
+    rrc A
+    mov Temp1, A
+
+ELSEIF D_BITS == 3
+    mov Temp2, #0
+    mov A, Temp4
+    cpl A
+    swap A
+    rl A
+    anl A, #0e0h
+    xch A, Temp3
+    cpl A
+    mov Temp5, A
+    swap A
+    rl A
+    anl A, #1fh
+    orl A, Temp3
+    mov Temp1, A
+ENDIF
+   
+    mov A, Dither_Cur_Bit
+    rl A
+    mov Dither_Cur_Bit, A
+
+    mov A, Temp5
+    anl A, #((1 SHL D_BITS) - 1)
+    add A, #(Dither_Table - int0_next)
+    movc A, @A + PC
+int0_next:  
+
+    
+    anl A, Dither_Cur_Bit
+    jz int0_no_dither
+
+    mov A, Temp1
+    add A, #1
+    mov A, Temp2
+    addc A, #0
+
+    jb ACC.CYCLE_OVFL_BIT, int0_no_dither
+
+    inc Temp1
+    mov Temp2, A
+    
+int0_no_dither:
+ENDIF
+    
+
 IF FETON_DELAY != 0
     clr C
     mov A, Temp1                        ; Skew damping fet timing
-    subb    A, #(FETON_DELAY SHL 1)     ; Use FETON_DELAY SHL 1 even for 48khz since dead time is absolute
+    subb A, #(FETON_DELAY SHR FDELAY_SHIFT)
     mov Temp3, A
     mov A, Temp2
     subb    A, #0   
@@ -1173,39 +1378,32 @@ IF FETON_DELAY != 0
 
 int0_int_set_pwm_damp_set:
 ENDIF
+
     mov Power_Pwm_Reg_L, Temp1
     mov Power_Pwm_Reg_H, Temp2
-IF FETON_DELAY != 0
+
 IF NO_DAMPING == 1
     mov Damp_Pwm_Reg_L, #0h
     mov Damp_Pwm_Reg_H, #0h
 ELSE    
     mov Damp_Pwm_Reg_L, Temp3
     mov Damp_Pwm_Reg_H, Temp4
-ENDIF    
 ENDIF
+    
     mov Rcp_Timeout_Cntd, #10           ; Set timeout count
-IF FETON_DELAY != 0
-    Clear_COVF_Interrupt
-    Enable_COVF_Interrupt               ; Generate a pca interrupt
-    jmp int0_int_schedule_pca
-ELSE
-    mov A, Current_Power_Pwm_Reg_H
-IF PWM48 != 1
-    jnb ACC.2, int0_int_set_pca_int_hi_pwm
-ELSE
-    jnb ACC.1, int0_int_set_pca_int_hi_pwm
-ENDIF    
-
     Clear_COVF_Interrupt
     Enable_COVF_Interrupt               ; Generate a pca interrupt
     jmp int0_int_schedule_pca
 
-int0_int_set_pca_int_hi_pwm:
-    Clear_CCF_Interrupt
-    Enable_CCF_Interrupt                ; Generate pca interrupt
-    jmp int0_int_schedule_pca
+Dither_Table:
+IF D_BITS == 1
+DB 00h, 55h
+ELSEIF D_BITS == 2    
+DB 00h, 11h, 55h, 77h
+ELSEIF D_BITS == 3    
+DB 00h, 01h, 11h, 15h, 55h, 57h, 77h, 7fh
 ENDIF
+
 
 int0_int_set_timeout:
     mov Rcp_Timeout_Cntd, #10           ; Set timeout count
@@ -1255,68 +1453,32 @@ reti
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 pca_int:    ; Used for setting pwm registers
-    clr IE_EA
-    push    PSW             ; Preserve registers through interrupt
-    push    ACC
-    setb    PSW.3           ; Select register bank 1 for this interrupt
-
-IF FETON_DELAY != 0                 ; HI/LO enable style drivers
-
-    mov Temp1, PCA0L                ; Read low byte, to transfer high byte to holding register
-    mov A, Current_Power_Pwm_Reg_H
-IF PWM48 != 1
-    jnb ACC.2, pca_int_hi_pwm
-ELSE    
-    jnb ACC.1, pca_int_hi_pwm
-ENDIF    
+    anl PCA0PWM, #0dfh ; clear covr irq
+    push ACC
+    mov A, PCA0L
     mov A, PCA0H
-IF PWM48 != 1
-    jb  ACC.2, pca_int_exit
-    jb  ACC.1, pca_int_exit
-ELSE
-    jb  ACC.1, pca_int_exit
-    jb  ACC.0, pca_int_exit
+    jnb ACC.CYCLE_OVFL_BIT, pca_no_update
+
+IF D_BITS < 3
+    mov PCA0CPL0, Power_Pwm_Reg_L
+    mov PCA0CPH0, Power_Pwm_Reg_H
+    
+IF FETON_DELAY != 0
+    mov PCA0CPL1, Damp_Pwm_Reg_L
+    mov PCA0CPH1, Damp_Pwm_Reg_H
 ENDIF
-    
-    
-    ajmp    pca_int_set_pwm
-
-pca_int_hi_pwm:
-    mov A, PCA0H
-IF PWM48 != 1
-    jnb ACC.2, pca_int_exit
-    jb  ACC.1, pca_int_exit
 ELSE
-    jnb	ACC.1, pca_int_exit			; Power above 50%, update pca in the 0x20-0x2F range
-	jb	ACC.0, pca_int_exit
+    mov PCA0CPH0, Power_Pwm_Reg_L
+IF FETON_DELAY != 0
+    mov PCA0CPH1, Damp_Pwm_Reg_L
+ENDIF
 ENDIF    
 
-pca_int_set_pwm:
-    Set_Power_Pwm_Regs
-    Set_Damp_Pwm_Regs
-    mov Current_Power_Pwm_Reg_H, Power_Pwm_Reg_H
     Disable_COVF_Interrupt
 
-ELSE                                ; EN/PWM style drivers
-    Set_Power_Pwm_Regs
-    mov Current_Power_Pwm_Reg_H, Power_Pwm_Reg_H
-    Disable_COVF_Interrupt
-    Disable_CCF_Interrupt
-
-ENDIF
-
-    ; Pwm updated, enable/disable interrupts
-    anl EIE1, #0EFh             ; Disable pca interrupts
-pca_int_exit:
-    Clear_COVF_Interrupt
-IF FETON_DELAY == 0
-    Clear_CCF_Interrupt
-ENDIF
-    pop ACC                     ; Restore preserved registers
-    pop PSW
-    setb    IE_EA
+pca_no_update:  
+    pop ACC
     reti
-;;; 
 
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
@@ -1466,11 +1628,19 @@ set_pwm_limit_low_rpm_exit:
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 set_pwm_limit_high_rpm:
+IF MCU_48MHZ == 1
     clr C
     mov A, Comm_Period4x_L
     subb    A, #0A0h                ; Limit Comm_Period to 160, which is 500k erpm
     mov A, Comm_Period4x_H
     subb    A, #00h
+ELSE    
+    clr	C
+	mov	A, Comm_Period4x_L
+	subb	A, #0E4h				; Limit Comm_Period to 228, which is 350k erpm
+	mov	A, Comm_Period4x_H
+	subb	A, #00h
+ENDIF    
     mov A, Pwm_Limit_By_Rpm
     jnc set_pwm_limit_high_rpm_inc_limit
     
@@ -1694,6 +1864,7 @@ calc_next_comm_timing:      ; Entry point for run phase
     inc Temp3           ; If it is pending, then timer has already wrapped
     setb    TMR2CN0_TR2     ; Timer 2 enabled
     setb    IE_EA
+IF MCU_48MHZ == 1
     clr C
     mov A, Temp3
     rrc A
@@ -1704,6 +1875,7 @@ calc_next_comm_timing:      ; Entry point for run phase
     mov A, Temp1
     rrc A
     mov Temp1, A
+ENDIF
 
                                 ; Calculate this commutation time
     mov Temp4, Prev_Comm_L
@@ -1723,7 +1895,9 @@ calc_next_comm_timing:      ; Entry point for run phase
     
     jb  Flags1.STARTUP_PHASE, calc_next_comm_startup
 
+IF MCU_48MHZ == 1
     anl A, #7Fh
+ENDIF    
     mov Temp2, A
     jnb Flags1.HIGH_RPM, ($+6)  ; Branch if high rpm
     ljmp    calc_next_comm_timing_fast
@@ -1735,7 +1909,9 @@ calc_next_comm_startup:
     mov Temp2, A
     mov A, Temp3
     subb    A, Temp6                ; Calculate the new extended commutation time
+IF MCU_48MHZ == 1
     anl A, #7Fh
+ENDIF    
     mov Temp3, A
     jz  calc_next_comm_startup_no_X
 
@@ -2043,6 +2219,7 @@ calc_new_wait_times:
     clr A
     subb    A, Temp4                
     mov Temp2, A    
+IF MCU_48MHZ == 1
     clr C
     mov A, Temp1                ; Multiply by 2
     rlc A
@@ -2050,6 +2227,7 @@ calc_new_wait_times:
     mov A, Temp2
     rlc A
     mov Temp2, A
+ENDIF    
     jnb Flags1.HIGH_RPM, ($+6)  ; Branch if high rpm
     ljmp    calc_new_wait_times_fast
 
@@ -2108,7 +2286,7 @@ store_times_up_or_down:
     mov A, Temp8                
     subb    A, #3                   ; Is timing higher than normal?
     jc  store_times_decrease        ; No - branch
-
+
 store_times_increase:
     mov Wt_Comm_Start_L, Temp3      ; Now commutation time (~60deg) divided by 4 (~15deg nominal)
     mov Wt_Comm_Start_H, Temp4
@@ -2218,6 +2396,8 @@ setup_zc_scan_timeout:
     mov A, Temp1
     rrc A
     mov Temp1, A
+
+IF MCU_48MHZ == 0
     clr C
     mov A, Temp2
     rrc A
@@ -2225,6 +2405,7 @@ setup_zc_scan_timeout:
     mov A, Temp1
     rrc A
     mov Temp1, A
+ENDIF    
     jnb Flags1.STARTUP_PHASE, setup_zc_scan_timeout_startup_done
 
     mov A, Temp2
@@ -2331,6 +2512,7 @@ ENDIF
     mov Temp2, #27
 
 comp_scale_samples:
+IF MCU_48MHZ == 1
     clr C
     mov A, Temp1
     rlc A
@@ -2339,7 +2521,8 @@ comp_scale_samples:
     mov A, Temp2
     rlc A
     mov Temp2, A
-
+ENDIF
+    
 comp_check_timeout:
     jb  WAIT_ACTIVE, comp_check_timeout_not_timed_out       ; Has zero cross scan timeout elapsed?
 
@@ -2394,7 +2577,11 @@ comp_read_wrong_extend_timeout:
     jnb Flags1.HIGH_RPM, comp_read_wrong_low_rpm    ; Branch if not high rpm
 
     mov TMR3L, #00h             ; Set timeout to ~1ms
-    mov TMR3H, #0F0h
+IF MCU_48MHZ == 1
+	mov	TMR3H, #0F0h
+ELSE
+	mov	TMR3H, #0F8h
+ENDIF
 comp_read_wrong_timeout_set:
     mov TMR3CN0, #04h               ; Timer 3 enabled and interrupt flag cleared
     setb    WAIT_ACTIVE
@@ -2404,10 +2591,12 @@ comp_read_wrong_timeout_set:
 comp_read_wrong_low_rpm:
     mov A, Comm_Period4x_H          ; Set timeout to ~4x comm period 4x value
     mov Temp7, #0FFh                ; Default to long
+IF MCU_48MHZ == 1
     clr C
     rlc A
     jc  comp_read_wrong_load_timeout
-
+ENDIF
+    
     clr C
     rlc A
     jc  comp_read_wrong_load_timeout
@@ -3104,6 +3293,7 @@ pgm_start:
     mov P2SKIP, #P2_PUSHPULL
     mov SFRPAGE, #0
 
+    
     ; Initialize the XBAR and related functionality
     Initialize_Xbar
     ; Switch power off again, after initializing ports
@@ -3123,9 +3313,11 @@ pgm_start:
     mov Beep_Strength, @Temp1
     ; Set initial arm variable
     mov Initial_Arm, #1
+    mov Dither_Cur_Bit, #1
 
+IF MCU_48MHZ == 1
     Set_MCU_Clk_48MHz
-    
+ENDIF    
     
     ; Initializing beep
     clr IE_EA           ; Disable interrupts explicitly
@@ -3186,14 +3378,18 @@ input_high_check_2:
 bootloader_done:
     clr IE_EA
     ; Decode settings
-    call    decode_settings
+    call    decode_settings 
     ; Set beep strength
     mov Temp1, #Pgm_Beep_Strength
     mov Beep_Strength, @Temp1
     ; Switch power off
     call    switch_power_off
+
+IF MCU_48MHZ == 1
     ; Set clock frequency
     Set_MCU_Clk_48MHz
+ENDIF
+    
 
     ; Setup timers 2 and 3
     mov TMR2CN0, #04h       ; Timer 2 enabled
@@ -3202,9 +3398,9 @@ bootloader_done:
     clr WAIT_ACTIVE
     
     Initialize_PCA          ; Initialize PCA
-IF PWM48 == 1
-    dec PCA0PWM				; Double PWM frequency
-ENDIF    
+;IF PWM48 == 1
+;    dec PCA0PWM				; Double PWM frequency
+;ENDIF    
     Set_Pwm_Polarity        ; Set pwm polarity
     Enable_Power_Pwm_Module ; Enable power pwm module
     Enable_Damp_Pwm_Module  ; Enable damping pwm module
@@ -3213,7 +3409,11 @@ ENDIF
 
     //  mov EIE1, #90h      ; Enable timer 3 and PCA0 interrupts
     mov EIE1, #10h      ; PCA0  interrupts
-    mov IP, #01h            ; High priority to INT0 interrupts
+    mov SFRPAGE, #10h
+    mov IPH, #01h            ; High priority to INT0 interrupts
+    mov SFRPAGE, #0h
+    mov EIP1, #10h           ; High prio for PCA0 interrupts
+    
     ; Initialize comparator
     Initialize_Comparator   ; Initialize comparator
     ; Initialize ADC
@@ -3252,7 +3452,11 @@ ENDIF
     
     ; Setup variables for DShot300
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot300)
-    mov DShot_Timer_Preset, #0          ; Load DShot sync timer preset (for DShot300)
+IF MCU_48MHZ == 1
+	mov	DShot_Timer_Preset, #0			; Load DShot sync timer preset (for DShot300)
+ELSE
+	mov	DShot_Timer_Preset, #128
+ENDIF
     mov DShot_Pwm_Thr, #40              ; Load DShot qualification pwm threshold (for DShot300)
     mov DShot_Frame_Length_Thr, #40     ; Load DShot frame length criteria
     ; Test whether signal is DShot300
@@ -3268,7 +3472,11 @@ ENDIF
 
     ; Setup variables for DShot600
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot600)
+IF MCU_48MHZ == 1
     mov DShot_Timer_Preset, #128            ; Load DShot sync timer preset (for DShot600)
+ELSE
+    mov	DShot_Timer_Preset, #192
+ENDIF    
     mov DShot_Pwm_Thr, #20              ; Load DShot qualification pwm threshold (for DShot600)
     mov DShot_Frame_Length_Thr, #20     ; Load DShot frame length criteria
     ; Test whether signal is DShot600
@@ -3287,8 +3495,12 @@ ENDIF
     clr Flags2.RCP_INVERTED
 
     ; Setup variables for DShot300
-    mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot300)
-    mov DShot_Timer_Preset, #0          ; Load DShot sync timer preset (for DShot300)
+    mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot300) 
+IF MCU_48MHZ == 1
+	mov	DShot_Timer_Preset, #0			; Load DShot sync timer preset (for DShot300)
+ELSE
+	mov	DShot_Timer_Preset, #128
+ENDIF
     mov DShot_Pwm_Thr, #40              ; Load DShot qualification pwm threshold (for DShot300)
     mov DShot_Frame_Length_Thr, #40     ; Load DShot frame length criteria
     ; Test whether signal is DShot300
@@ -3304,7 +3516,11 @@ ENDIF
 
     ; Setup variables for DShot600
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot600)
+IF MCU_48MHZ == 1
     mov DShot_Timer_Preset, #128            ; Load DShot sync timer preset (for DShot600)
+ELSE
+    mov	DShot_Timer_Preset, #192
+ENDIF    
     mov DShot_Pwm_Thr, #20              ; Load DShot qualification pwm threshold (for DShot600)
     mov DShot_Frame_Length_Thr, #20     ; Load DShot frame length criteria
     ; Test whether signal is DShot600
