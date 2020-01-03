@@ -2560,9 +2560,11 @@ comp_check_timeout_not_timed_out:
     Read_Comp_Out                   ; Read comparator output
     anl A, #40h
     cjne    A, Bit_Access, comp_read_wrong
+    setb P2.DebugPin
     ajmp    comp_read_ok
     
 comp_read_wrong:
+    clr P2.DebugPin
     jnb Flags1.STARTUP_PHASE, comp_read_wrong_not_startup
 
     inc Temp1                   ; Increment number of OK readings required
@@ -2660,6 +2662,7 @@ comp_read_ok_jmp:
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 setup_comm_wait:
+    clr P2.DebugPin
     clr IE_EA
     anl EIE1, #7Fh      ; Disable timer 3 interrupts
     mov TMR3CN0, #00h       ; Timer 3 disabled and interrupt flag cleared
