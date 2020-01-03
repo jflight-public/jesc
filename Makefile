@@ -5,7 +5,7 @@ REVISION ?= $(MAJOR)_$(MINOR)
 
 # targets
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
-MCUS         = H
+MCUS         = H L
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
 PWMS         = 24 48 96
 
@@ -64,15 +64,15 @@ space := $(blank) $(blank)
 $(space) := $(space)
 
 define MAKE_OBJ
-OBJS += $(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ 
-$(OUTPUT_DIR)/JESC_$(1)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
+OBJS += $(OUTPUT_DIR)/JESC_$(1)$(2)$(3)_$(4)_$(REVISION).OBJ 
+$(OUTPUT_DIR)/JESC_$(1)$(2)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(eval _ESC         := $(1))
 	$(eval _ESC_INT     := $(shell printf "%d" "'${_ESC}"))
 	$(eval _ESCNO       := $(shell echo $$(( $(_ESC_INT) - 65 + 1))))
     $(eval _MCU_48MHZ   := $(subst L,0,$(subst H,1,$(2))))
     $(eval _PWM         := $(4))
 	$(eval _FETON_DELAY := $(3))
-	$(eval _LOG         := $(LOG_DIR)/$(1)$(3)_$(4)_$(REVISION).log)
+	$(eval _LOG         := $(LOG_DIR)/$(1)$(2)$(3)_$(4)_$(REVISION).log)
 	@mkdir -p $(OUTPUT_DIR)
 	@mkdir -p $(LOG_DIR)
 	@echo "AX51 : $$<"
@@ -95,7 +95,7 @@ EFM8_LOAD_BIN  ?= efm8load.py
 EFM8_LOAD_PORT ?= /dev/ttyUSB0
 EFM8_LOAD_BAUD ?= 57600
 
-SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(FETON_DELAY)_$(PWM)_$(REVISION).HEX
+SINGLE_TARGET_HEX = $(OUTPUT_DIR)/JESC_$(VARIANT)$(MCU)$(FETON_DELAY)_$(PWM)_$(REVISION).HEX
 
 single_target : $(SINGLE_TARGET_HEX)
 

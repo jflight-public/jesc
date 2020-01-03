@@ -285,6 +285,13 @@ ELSE
 MCU_TAG EQU "H"
 ENDIF
 
+
+IF FETON_DELAY == 120
+DELAY_TAG2 EQU "0#"
+ELSE
+DELAY_TAG2 EQU "# "
+ENDIF
+    
 IF FETON_DELAY == 0
 DELAY_TAG EQU "00"
 ELSEIF FETON_DELAY == 5
@@ -308,7 +315,7 @@ DELAY_TAG EQU "70"
 ELSEIF FETON_DELAY == 90
 DELAY_TAG EQU "90"
 ELSEIF FETON_DELAY == 120
-DELAY_TAG EQU "120"
+DELAY_TAG EQU "12"
 ENDIF
 
 IF PWM == 24
@@ -326,8 +333,9 @@ Eep_ESC_Layout:
     DB "_"
     DB MCU_TAG
     DB "_"
-    DB DELAY_TAG
-    DB "#       "	; ESC layout tag
+    DW DELAY_TAG
+    DW DELAY_TAG2
+    DB "        "	; ESC layout tag
 
 
 IF MCU_48MHZ == 1
@@ -362,14 +370,6 @@ DEFAULT_PGM_LED_CONTROL             EQU 0   ; Byte for LED control. 2bits per LE
 
 ;**** **** **** **** ****
 ; Temporary register definitions
-ATemp1       EQU AR0
-ATemp2       EQU AR1
-ATemp3       EQU AR2
-ATemp4       EQU AR3
-ATemp5       EQU AR4
-ATemp6       EQU AR5
-ATemp7       EQU AR6
-ATemp8       EQU AR7
 
 Temp1       EQU R0
 Temp2       EQU R1
@@ -402,6 +402,7 @@ MOTOR_STARTED           EQU     2       ; Set when motor is started
 DIR_CHANGE_BRAKE        EQU     3       ; Set when braking before direction change
 HIGH_RPM                EQU     4       ; Set when motor rpm is high (Comm_Period4x_H less than 2)
 WAIT_ACTIVE             BIT Flags1.5    ; Set if set timeout hasn't triggered yet
+TIMER1_XFER             BIT Flags1.6    
     
 Flags2:                 DS  1       ; State flags. NOT reset upon init_start
 RCP_UPDATED             EQU     0       ; New RC pulse length value available
@@ -598,8 +599,8 @@ Eep_Name:                   DB  "                "              ; Name tag (16 B
 
 CSEG AT 0b0h
 Jesc_Name:                   DB  "JESC01 #"
-    DB PWM_TAG
-    DB "       "            ; Name tag (16 Bytes)
+    DW PWM_TAG
+    DB "      "            ; Name tag (16 Bytes)
 
 End_Wait MACRO
 local l1
@@ -618,12 +619,30 @@ ENDIF
 CSEG AT 03h         ; Int0 interrupt    
     mov DShot_Byte, TL0
     jmp int0_int    
+
 CSEG AT 0Bh         ; Timer0 overflow interrupt
     jmp SERVICE_T0_INT
+
 CSEG AT 13h         ; Int1 interrupt
     jmp int1_int
+
+IF MCU_48MHZ == 0
+t1_int_jmp:
+    ajmp t1_int
+CSEG AT 1Bh         ; Timer1 overflow interrupt
+    jnb TIMER1_XFER, t1_int_jmp
+    xch A, MemPtr
+    xch A, R0
+    mov TL1, @R0
+    xch A, R0
+    inc A
+    xch A, MemPtr
+    reti
+ELSE
 CSEG AT 1Bh         ; Timer1 overflow interrupt
     jmp t1_int
+ENDIF    
+
 CSEG AT 2Bh         ; Timer2 overflow interrupt
     jmp t2_int  
 CSEG AT 3Bh         ; SMB irq
@@ -633,8 +652,8 @@ CSEG AT 5Bh         ; Pca interrupt
 CSEG AT 73h         ; Timer3 overflow/compare interrupt
 
 t3_int: ; Used for commutation timing
-    anl EIE1, #7Fh
     clr IE_EA
+    anl EIE1, #7Fh
     mov TMR3RLL, #0FAh      ; Set a short delay before next interrupt
     mov TMR3RLH, #0FFh
     setb IE_EA
@@ -661,7 +680,7 @@ ENDIF
 
 ;**** **** **** **** ****
 
-    
+CSEG at 0c0h    
 ; Table definitions
 STARTUP_POWER_TABLE:    DB  04h, 06h, 08h, 0Ch, 10h, 18h, 20h, 30h, 40h, 60h, 80h, 0A0h, 0C0h
 
@@ -777,18 +796,15 @@ ENDM
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
-;    clr IE_EA
     anl EIE1, #07fh
-;    setb IE_EA
     jnb WAIT_ACTIVE, l2
-;    setb IE_EA
     call SERVICE_BEGIN_WAIT
+IF MCU_48MHZ == 1
     mov SFRPAGE, #0
+ENDIF    
 l1:
     jb WAIT_ACTIVE, l1
 l2:
-;     orl EIE1, #80h
-;    setb IE_EA
 ENDM    
     
 Notify_Frame MACRO  
@@ -899,6 +915,13 @@ ENDIF
     mov DPTR, #0            ; Set pointer
     mov Temp1, DShot_Pwm_Thr; DShot pulse width criteria
 
+IF MCU_48MHZ == 0
+	clr	C
+	mov	A, Temp1			; Scale pulse width criteria
+	rrc	A
+	mov	Temp1, A
+ENDIF
+    
 t1_int_decode:
     ajmp    t1_int_decode_msb
 
@@ -1201,31 +1224,6 @@ t2_int_exit:
     reti
 
 
-;**** **** **** **** **** **** **** **** **** **** **** **** ****
-;
-; Timer 3 interrupt routine
-;
-; No assumptions
-; Requirements: Temp variables can NOT be used since PSW.x is not set
-;               ACC can not be used, as it is not pushed to stack
-;
-;**** **** **** **** **** **** **** **** **** **** **** **** ****
-IF 0
-t3_int: ; Used for commutation timing
-    clr IE_EA
-    anl EIE1, #7Fh
-    mov TMR3RLL, #0FAh      ; Set a short delay before next interrupt
-    mov TMR3RLH, #0FFh
-    anl TMR3CN0, #07fh             ; clear irq flag
-    setb IE_EA
-    jnb WAIT_ACTIVE, t3_exit
-    clr WAIT_ACTIVE 
-    End_Wait
-t3_exit:    
-reti
-    
-ENDIF
-
     
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 ;
@@ -1522,7 +1520,11 @@ wait200ms:
     mov Temp2, #200
     jmp waitxms_i
 
-waitxms_i: 
+waitxms_i:
+IF MCU_48MHZ == 1
+    Set_MCU_Clk_24MHz
+ENDIF    
+    
 
 waitxms_o:  ; Outer loop
     mov Temp1, #20
@@ -1537,6 +1539,9 @@ waitnow:
     djnz    ACC, waitnow
     djnz    Temp1, waitxms_m
     djnz    Temp2, waitxms_o
+IF MCU_48MHZ == 1
+    Set_MCU_Clk_48MHz
+ENDIF    
     ret
 
 twait1ms:   
@@ -1566,8 +1571,13 @@ twait200ms:
 twaitxms_i: 
 
     mov TMR3CN0, #0             ; stop timer 3
+IF MCU_48MHZ == 1
     mov TMR3L, #-208
     mov TMR3H, #-7
+ELSE
+    mov TMR3L, #-104
+    mov TMR3H, #-4
+ENDIF    
     mov TMR3CN0, #04h
     setb WAIT_ACTIVE
     orl EIE1, #80h  ; Enable timer 3 interrupts
@@ -2955,7 +2965,9 @@ beep:   ; Beep loop start
     ret
 
 beep_start:
+IF MCU_48MHZ == 1
     Set_MCU_Clk_24MHz
+ENDIF    
     mov Temp2, #2
 beep_onoff:
     clr A
@@ -2985,7 +2997,7 @@ beep_apwmfet_off:
     jnb ACC.0, beep_cpwmfet_off
     CpwmFET_off     ; CpwmFET off
 beep_cpwmfet_off:
-    mov A, #150     ; 25µs off
+    mov A, #150     ; 25ï¿½s off
     djnz    ACC, $      
     djnz    Temp2, beep_onoff
     ; Copy variable
@@ -2996,7 +3008,9 @@ beep_off:       ; Fets off loop
     djnz    Temp1,  beep_off
     djnz    Temp4,  beep
     BcomFET_off     ; BcomFET off   
+IF MCU_48MHZ == 1
     Set_MCU_Clk_48MHz
+ENDIF
     ret
 
 
@@ -3295,9 +3309,9 @@ pgm_start:
     mov P1SKIP, #P1_SKIP                
     mov P2, #0
     mov P2MDOUT, #P2_PUSHPULL
-    mov SFRPAGE, # 20h
-    mov P2SKIP, #P2_PUSHPULL
-    mov SFRPAGE, #0
+;    mov SFRPAGE, # 20h
+;    mov P2SKIP, #P2_PUSHPULL
+;    mov SFRPAGE, #0
 
     
     ; Initialize the XBAR and related functionality
@@ -3329,20 +3343,20 @@ ENDIF
     clr IE_EA           ; Disable interrupts explicitly
     call wait200ms  
     call beep_f1
-    call wait30ms
-    call wait30ms
-    call wait30ms
+    call wait15ms
+    call wait15ms
+    call wait15ms
     call beep_f2
-    call wait30ms
-    call wait30ms
-    call wait30ms
+    call wait15ms
+    call wait15ms
+    call wait15ms
     call beep_f3
-    call wait30ms
-    call wait30ms
-    call wait30ms
+    call wait15ms
+    call wait15ms
+    call wait15ms
     call beep_f4
     call beep_f4
-    call wait200ms
+    call wait100ms
     call    led_control
 
 
@@ -3356,14 +3370,20 @@ init_no_signal:
     clr IE_EA
     ; Switch off timer 4 and switch rtx to input
     ; orl XBR2, #80h              ;disable pullups
+
+IF MCU_48MHZ == 1
     mov SFRPAGE, #10h 
     anl EIE2, #(not 10h) ; Disable timer 4 interrupts
     mov SFRPAGE, #00h
+ENDIF
+    
     anl  RTX_MDOUT, #not( 1 shl RTX_PIN)    ; RTX is open drain
     setb RTX_PORT.RTX_PIN    ; set to 1 -> no driver, input
     
+IF MCU_48MHZ == 1
     Set_MCU_Clk_24MHz
-
+ENDIF
+    
     ; Initialize flash keys to invalid values
     mov Flash_Key_1, #0
     mov Flash_Key_2, #0
@@ -3415,9 +3435,7 @@ ENDIF
 
     //  mov EIE1, #90h      ; Enable timer 3 and PCA0 interrupts
     mov EIE1, #10h      ; PCA0  interrupts
-    mov SFRPAGE, #10h
-    mov IPH, #01h            ; High priority to INT0 interrupts
-    mov SFRPAGE, #0h
+    mov IP, #01h            ; High priority to INT0 interrupts
     mov EIP1, #10h           ; High prio for PCA0 interrupts
     
     ; Initialize comparator
