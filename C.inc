@@ -93,7 +93,7 @@ ELSE
 	mov	PCA0CPM1, #42h				; Enable comparator of module, set pwm mode
 ENDIF
 ENDM
-RClear_COVF_Interrupt MACRO
+Clear_COVF_Interrupt MACRO
 	anl	PCA0PWM, #0DFh
 ENDM
 Clear_CCF_Interrupt MACRO

@@ -142,6 +142,8 @@ W_                      EQU 23  ; RC MC MB X  CC MA X X      X  Ap Bp Cp X  X  X
 ;ESCNO EQU V_
 ;ESCNO EQU W_
 
+DEBUG_COMP EQU 0
+
 ;**** **** **** **** ****
 ; Select the MCU type (or unselect for use with external batch compile file)
 ;MCU_48MHZ EQU  0
@@ -403,6 +405,7 @@ DIR_CHANGE_BRAKE        EQU     3       ; Set when braking before direction chan
 HIGH_RPM                EQU     4       ; Set when motor rpm is high (Comm_Period4x_H less than 2)
 WAIT_ACTIVE             BIT Flags1.5    ; Set if set timeout hasn't triggered yet
 TIMER1_XFER             BIT Flags1.6    
+;RC_DURING_COMMUTATION   BIT Flags1.7
     
 Flags2:                 DS  1       ; State flags. NOT reset upon init_start
 RCP_UPDATED             EQU     0       ; New RC pulse length value available
@@ -631,6 +634,7 @@ t1_int_jmp:
     ajmp t1_int
 CSEG AT 1Bh         ; Timer1 overflow interrupt
     jnb TIMER1_XFER, t1_int_jmp
+    cpl RTX_PORT.RTX_PIN
     xch A, MemPtr
     xch A, R0
     mov TL1, @R0
@@ -658,9 +662,13 @@ t3_int: ; Used for commutation timing
     mov TMR3RLH, #0FFh
     setb IE_EA
     anl TMR3CN0, #07fh             ; clear irq flag
+IF MCU_48MHZ == 1
     jnb WAIT_ACTIVE, t3_exit
     clr WAIT_ACTIVE 
     End_Wait
+ELSE
+    clr WAIT_ACTIVE 
+ENDIF    
 t3_exit:    
 reti
 
@@ -793,6 +801,7 @@ Decode_Dshot_2Lsb MACRO
 	inc	DPL
 ENDM
     
+IF MCU_48MHZ == 1
 Wait_Pending MACRO
 local l1, l2
     jnb SERVICE_DETECTED, l1
@@ -806,11 +815,21 @@ l1:
     jb WAIT_ACTIVE, l1
 l2:
 ENDM    
+ELSE
+Wait_Pending MACRO
+    jb WAIT_ACTIVE, $
+ENDM
+ENDIF    
     
+IF MCU_48MHZ == 1
 Notify_Frame MACRO  
     setb SMB0CN0_SI ; Indicate Frame available
-ENDM   
-
+ENDM
+ELSE    
+Notify_Frame MACRO  
+ENDM
+ENDIF
+    
 init_plugin:    
     clr IE_EA
     push DPL
@@ -854,18 +873,23 @@ ret
 t1_int:
     clr     IE_EA
     clr IE_EX0          ; Disable int0 interrupts
-    anl EIE1, #0EFh     ; Disable pca interrupts
+    clr TMR2CN0_TR2     ; Timer 2 disabled
     clr TCON_TR1            ; Stop timer 1
-    mov TL1, DShot_Timer_Preset ; Reset sync timer
     push    PSW
     setb    PSW.3           ; Select register bank 1 for this interrupt
-    push    ACC
-    push    B               ; Will be pop'ed by int0 exit
-    clr TMR2CN0_TR2     ; Timer 2 disabled
     mov Temp1, TMR2L        ; Read timer value
     mov Temp2, TMR2H
     setb    TMR2CN0_TR2     ; Timer 2 enabled
     setb    IE_EA
+    anl EIE1, #0EFh     ; Disable pca interrupts
+
+    
+    mov TL1, DShot_Timer_Preset ; Reset sync timer
+    push    ACC
+    push    B               ; Will be pop'ed by int0 exit
+
+;    setb RC_DURING_COMMUTATION
+    
     ; Reset timer 0
     mov TL0, #0
     ; Check frame time length
@@ -975,6 +999,7 @@ t1_int_decode_lsb:
     ajmp int0_int_outside_range
 
 t1_int_xor_ok:
+;    call SERVICE_NOTIFY_FRAME 
     Notify_Frame
     
 t1_int_no_notify:
@@ -1413,10 +1438,12 @@ int0_int_set_timeout:
     mov Rcp_Timeout_Cntd, #10           ; Set timeout count
 int0_int_exit:
 int0_int_schedule_pca:  
+IF MCU_48MHZ == 1
     mov A, EIE1
     mov C, ACC.0
     anl C, SMB0CN0_SI
     jc int0_int_delaypc0
+ENDIF    
     pop B                           ; Restore preserved registers
     pop ACC
     pop PSW
@@ -1479,12 +1506,11 @@ ENDIF
 ENDIF    
 
     Disable_COVF_Interrupt
-
 pca_no_update:  
     pop ACC
     reti
 
-
+    
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 ;
 ; Wait xms ~(x*4*250)  (Different entry points) 
@@ -1906,8 +1932,8 @@ ENDIF
     mov A, Temp2
     subb    A, Temp5
 
-    mov Comm_Period1x_L, Temp1
-    mov Comm_Period1x_H, A
+;    mov Comm_Period1x_L, Temp1
+;    mov Comm_Period1x_H, A
     
     jb  Flags1.STARTUP_PHASE, calc_next_comm_startup
 
@@ -2130,6 +2156,8 @@ calc_next_comm_timing_fast:
     ; Calculate new commutation time
     mov Temp3, Comm_Period4x_L  ; Comm_Period4x(-l-h) holds the time of 4 commutations
     mov Temp4, Comm_Period4x_H
+;    jb RC_DURING_COMMUTATION, calc_new_wait_times_fast_timing_reduction
+
     mov A, Temp4                ; Divide by 2 4 times
     swap    A
     mov Temp7, A
@@ -2166,6 +2194,7 @@ calc_next_comm_timing_fast:
 
     clr Flags1.HIGH_RPM         ; Clear high rpm bit
 
+calc_new_wait_times_fast_timing_reduction:  
     ; Set timing reduction
     mov Temp1, #2
     mov A, Temp4                ; Divide by 2 4 times
@@ -2191,6 +2220,7 @@ load_min_time_fast:
     mov Temp3, #1
 
 calc_new_wait_times_fast_done:  
+;    clr RC_DURING_COMMUTATION
     mov Temp1, #Pgm_Comm_Timing ; Load timing setting
     mov A, @Temp1               
     mov Temp8, A                ; Store in Temp8
@@ -2489,29 +2519,8 @@ wait_for_comp_out_start:
 
 
 IF  NK1306 == 0
-    mov Temp2, #25              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
+    mov Temp2, #5              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
     mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
-    mov Temp1, A
-    clr C                       
-    subb    A, #25
-    jc  ($+4)
-
-    mov Temp1, #25
-ELSE  
-    mov Temp2, #5               ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
-    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
     clr C
     rrc A
     jnz ($+3)
@@ -2520,7 +2529,28 @@ ELSE
     clr C                       
     subb    A, #5
     jc  ($+4)
+
     mov Temp1, #5
+ELSE  
+    mov Temp2, #20               ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
+    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    mov Temp1, A
+    clr C                       
+    subb    A, #20
+    jc  ($+4)
+    mov Temp1, #20
 ENDIF   
     jnb Flags1.STARTUP_PHASE, comp_scale_samples
 
@@ -2560,11 +2590,15 @@ comp_check_timeout_not_timed_out:
     Read_Comp_Out                   ; Read comparator output
     anl A, #40h
     cjne    A, Bit_Access, comp_read_wrong
+IF DEBUG_COMP    
     setb P2.DebugPin
+ENDIF
     ajmp    comp_read_ok
     
 comp_read_wrong:
+IF DEBUG_COMP    
     clr P2.DebugPin
+ENDIF
     jnb Flags1.STARTUP_PHASE, comp_read_wrong_not_startup
 
     inc Temp1                   ; Increment number of OK readings required
@@ -2662,7 +2696,9 @@ comp_read_ok_jmp:
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 setup_comm_wait:
+IF DEBUG_COMP    
     clr P2.DebugPin
+ENDIF
     clr IE_EA
     anl EIE1, #7Fh      ; Disable timer 3 interrupts
     mov TMR3CN0, #00h       ; Timer 3 disabled and interrupt flag cleared
@@ -3312,10 +3348,11 @@ pgm_start:
     mov P1SKIP, #P1_SKIP                
     mov P2, #0
     mov P2MDOUT, #P2_PUSHPULL
-;    mov SFRPAGE, # 20h
-;    mov P2SKIP, #P2_PUSHPULL
-;    mov SFRPAGE, #0
-
+IF MCU_48MHZ == 1
+    mov SFRPAGE, # 20h
+    mov P2SKIP, #P2_PUSHPULL
+    mov SFRPAGE, #0
+ENDIF
     
     ; Initialize the XBAR and related functionality
     Initialize_Xbar
@@ -3427,9 +3464,6 @@ ENDIF
     clr WAIT_ACTIVE
     
     Initialize_PCA          ; Initialize PCA
-;IF PWM48 == 1
-;    dec PCA0PWM				; Double PWM frequency
-;ENDIF    
     Set_Pwm_Polarity        ; Set pwm polarity
     Enable_Power_Pwm_Module ; Enable power pwm module
     Enable_Damp_Pwm_Module  ; Enable damping pwm module
@@ -3439,7 +3473,8 @@ ENDIF
     //  mov EIE1, #90h      ; Enable timer 3 and PCA0 interrupts
     mov EIE1, #10h      ; PCA0  interrupts
     mov IP, #01h            ; High priority to INT0 interrupts
-    mov EIP1, #10h           ; High prio for PCA0 interrupts
+;    mov EIP1, #80h            ; High priority to Timer 3 interrupts
+;    mov EIP1, #10h           ; High prio for PCA0 interrupts
     
     ; Initialize comparator
     Initialize_Comparator   ; Initialize comparator
@@ -3476,6 +3511,28 @@ ENDIF
 
 //    call twait200ms
 
+IF MCU_48MHZ == 1
+IF MCU_48MHZ == 0
+	mov	CKCON0, #01h		; Timer 0/1 clock is system clock divided by 4 (for DShot150)
+	; Setup variables for DSshot150
+IF MCU_48MHZ == 1
+	mov	DShot_Timer_Preset, #128			; Load DShot sync timer preset (for DShot150)
+ELSE
+	mov	DShot_Timer_Preset, #192
+ENDIF
+	mov	DShot_Pwm_Thr, #20				; Load DShot qualification pwm threshold (for DShot150)
+	mov	DShot_Frame_Length_Thr, #80		; Load DShot frame length criteria
+	; Test whether signal is DShot150
+	mov	Rcp_Outside_Range_Cnt, #10		; Set out of range counter
+	call twait100ms						; Wait for new RC pulse
+	mov	DShot_Pwm_Thr, #16				; Load DShot regular pwm threshold
+	clr	C
+	mov	A, Rcp_Outside_Range_Cnt			; Check if pulses were accepted
+	subb	A, #10
+	mov 	Dshot_Cmd, #0
+	mov 	Dshot_Cmd_Cnt, #0
+	jc	validate_rcp_start
+ENDIF
     
     ; Setup variables for DShot300
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot300)
@@ -3497,6 +3554,7 @@ ENDIF
     mov     Dshot_Cmd_Cnt, #0
     jc  validate_rcp_start
 
+IF MCU_48MHZ == 1
     ; Setup variables for DShot600
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot600)
 IF MCU_48MHZ == 1
@@ -3516,10 +3574,34 @@ ENDIF
     mov     Dshot_Cmd, #0
     mov     Dshot_Cmd_Cnt, #0
     jc  validate_rcp_start
-
+ENDIF    
+ENDIF
+    
     ; Non inverted
     mov IT01CF, #(80h+(RTX_PIN SHL 4)+(RTX_PIN))    ; Route RCP input to INT0/1, with INT1 inverted
     clr Flags2.RCP_INVERTED
+
+IF MCU_48MHZ == 0
+	mov	CKCON0, #01h		; Timer 0/1 clock is system clock divided by 4 (for DShot150)
+	; Setup variables for DSshot150
+IF MCU_48MHZ == 1
+	mov	DShot_Timer_Preset, #128			; Load DShot sync timer preset (for DShot150)
+ELSE
+	mov	DShot_Timer_Preset, #192
+ENDIF
+	mov	DShot_Pwm_Thr, #20				; Load DShot qualification pwm threshold (for DShot150)
+	mov	DShot_Frame_Length_Thr, #80		; Load DShot frame length criteria
+	; Test whether signal is DShot150
+	mov	Rcp_Outside_Range_Cnt, #10		; Set out of range counter
+	call twait100ms						; Wait for new RC pulse
+	mov	DShot_Pwm_Thr, #16				; Load DShot regular pwm threshold
+	clr	C
+	mov	A, Rcp_Outside_Range_Cnt			; Check if pulses were accepted
+	subb	A, #10
+	mov 	Dshot_Cmd, #0
+	mov 	Dshot_Cmd_Cnt, #0
+	jc	validate_rcp_start
+ENDIF
 
     ; Setup variables for DShot300
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot300) 
@@ -3541,6 +3623,7 @@ ENDIF
     mov     Dshot_Cmd_Cnt, #0
     jc  validate_rcp_start
 
+IF MCU_48MHZ == 1
     ; Setup variables for DShot600
     mov CKCON0, #0Ch                    ; Timer 0/1 clock is system clock (for DShot600)
 IF MCU_48MHZ == 1
@@ -3560,7 +3643,7 @@ ENDIF
     mov     Dshot_Cmd, #0
     mov     Dshot_Cmd_Cnt, #0
     jc  validate_rcp_start
-
+ENDIF
     ljmp    init_no_signal
 
 validate_rcp_start:
@@ -4291,6 +4374,5 @@ check_bootloader_startup:
 CSEG AT 19FDh                   ;
 reset:
 ljmp    pgm_start
-
-
+    
 END

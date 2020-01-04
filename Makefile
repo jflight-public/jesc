@@ -1,13 +1,14 @@
 # set current revision
 MAJOR ?= 2
-MINOR ?= 2
+MINOR ?= 3
 REVISION ?= $(MAJOR)_$(MINOR)
 
 # targets
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
 MCUS         = H L
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
-PWMS         = 24 48 96
+PWMS_H       = 24 48 96
+PWMS_L       = 24 48
 
 # example single target
 VARIANT     ?= J
@@ -106,11 +107,12 @@ all : $$(HEX_TARGETS)
 $(foreach _e,$(TARGETS), \
 	$(foreach _m, $(MCUS), \
 		$(foreach _f, $(FETON_DELAYS), \
-	        $(foreach _p, $(PWMS), \
+	        $(foreach _p, $(PWMS_$(_m)), \
 			    $(eval $(call MAKE_OBJ,$(_e),$(_m),$(_f),$(_p)))))))
 
 
 $(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ 
+#$(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ $(OUTPUT_DIR)/TELEMETRY_2_2.OBJ
 	$(eval LOG         := $(LOG_DIR)/$(basename $(notdir $@)).log)
 	@echo "LX51 : linking $(subst $( ),$(,) ,$^) to $@"
 	@$(LX51) $(subst $( ),$(,) ,$^) TO "$@" "$(LX51_FLAGS)" >> $(LOG) 2>&1; test $$? -lt 2 || tail $(LOG)
