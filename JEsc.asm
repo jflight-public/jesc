@@ -272,6 +272,18 @@ $include (W.inc)        ; Select pinout W
 LAYOUT_TAG EQU "W"
 ENDIF
 
+IF FETON_DELAY != 0 && (ESCNO == B_ OR ESCNO == H_ OR ESCNO == K_ OR ESCNO == N_ OR ESCNO == S_ OR ESCNO == T_ OR ESCNO == V_ OR ESCNO == W_)
+PCA_POWER_L EQU PCA0CPL1
+PCA_POWER_H EQU PCA0CPH1
+PCA_DAMP_L EQU PCA0CPL0
+PCA_DAMP_H EQU PCA0CPH0
+ELSE
+PCA_POWER_L EQU PCA0CPL0
+PCA_POWER_H EQU PCA0CPH0
+PCA_DAMP_L EQU PCA0CPL1
+PCA_DAMP_H EQU PCA0CPH1
+ENDIF    
+
 ;**** **** **** **** ****
 ; Uses internal calibrated oscillator set to 24/48Mhz
 ;**** **** **** **** ****
@@ -1486,27 +1498,29 @@ reti
 pca_int:    ; Used for setting pwm registers
     anl PCA0PWM, #0dfh ; clear covr irq
     push ACC
+    clr IE_EA
     mov A, PCA0L
     mov A, PCA0H
     jnb ACC.CYCLE_OVFL_BIT, pca_no_update
 
 IF D_BITS < 3
-    mov PCA0CPL0, Power_Pwm_Reg_L
-    mov PCA0CPH0, Power_Pwm_Reg_H
+    mov PCA_POWER_L, Power_Pwm_Reg_L
+    mov PCA_POWER_H, Power_Pwm_Reg_H
     
 IF FETON_DELAY != 0
-    mov PCA0CPL1, Damp_Pwm_Reg_L
-    mov PCA0CPH1, Damp_Pwm_Reg_H
+    mov PCA_DAMP_L, Damp_Pwm_Reg_L
+    mov PCA_DAMP_H, Damp_Pwm_Reg_H
 ENDIF
 ELSE
-    mov PCA0CPH0, Power_Pwm_Reg_L
+    mov PCA_POWER_H, Power_Pwm_Reg_L
 IF FETON_DELAY != 0
-    mov PCA0CPH1, Damp_Pwm_Reg_L
+    mov PCA_DAMP_H, Damp_Pwm_Reg_L
 ENDIF
 ENDIF    
 
     Disable_COVF_Interrupt
 pca_no_update:  
+    setb IE_EA
     pop ACC
     reti
 
