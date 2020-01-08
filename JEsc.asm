@@ -2533,29 +2533,8 @@ wait_for_comp_out_start:
 
 
 IF  NK1306 == 0
-    mov Temp2, #5              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
+    mov Temp2, #20              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
     mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
-    mov Temp1, A
-    clr C                       
-    subb    A, #5
-    jc  ($+4)
-
-    mov Temp1, #5
-ELSE  
-    mov Temp2, #20               ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
-    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
-    clr C
-    rrc A
-    jnz ($+3)
-    inc A
     clr C
     rrc A
     jnz ($+3)
@@ -2564,7 +2543,28 @@ ELSE
     clr C                       
     subb    A, #20
     jc  ($+4)
+
     mov Temp1, #20
+ELSE  
+    mov Temp2, #5               ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
+    mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    clr C
+    rrc A
+    jnz ($+3)
+    inc A
+    mov Temp1, A
+    clr C                       
+    subb    A, #5
+    jc  ($+4)
+    mov Temp1, #5
 ENDIF   
     jnb Flags1.STARTUP_PHASE, comp_scale_samples
 
