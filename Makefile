@@ -112,7 +112,6 @@ $(foreach _e,$(TARGETS), \
 
 
 $(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ 
-#$(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ $(OUTPUT_DIR)/TELEMETRY_2_2.OBJ
 	$(eval LOG         := $(LOG_DIR)/$(basename $(notdir $@)).log)
 	@echo "LX51 : linking $(subst $( ),$(,) ,$^) to $@"
 	@$(LX51) $(subst $( ),$(,) ,$^) TO "$@" "$(LX51_FLAGS)" >> $(LOG) 2>&1; test $$? -lt 2 || tail $(LOG)
