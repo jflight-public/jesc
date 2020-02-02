@@ -143,6 +143,7 @@ W_                      EQU 23  ; RC MC MB X  CC MA X X      X  Ap Bp Cp X  X  X
 ;ESCNO EQU W_
 
 DEBUG_COMP EQU 0
+DEBUG_COMP_DETAILED  EQU 0
 
 ;**** **** **** **** ****
 ; Select the MCU type (or unselect for use with external batch compile file)
@@ -2518,6 +2519,9 @@ wait_for_comp_out_high:
     mov Bit_Access, #00h        
 
 wait_for_comp_out_start:
+IF DEBUG_COMP
+    setb P2.DebugPin
+ENDIF
     ; Set number of comparator readings
     mov Temp1, #1                   ; Number of OK readings required
     mov Temp2, #1                   ; Max number of readings required
@@ -2604,13 +2608,14 @@ comp_check_timeout_not_timed_out:
     Read_Comp_Out                   ; Read comparator output
     anl A, #40h
     cjne    A, Bit_Access, comp_read_wrong
-IF DEBUG_COMP    
+
+IF DEBUG_COMP && DEBUG_COMP_DETAILED
     setb P2.DebugPin
 ENDIF
     ajmp    comp_read_ok
     
 comp_read_wrong:
-IF DEBUG_COMP    
+IF DEBUG_COMP && DEBUG_COMP_DETAILED
     clr P2.DebugPin
 ENDIF
     jnb Flags1.STARTUP_PHASE, comp_read_wrong_not_startup

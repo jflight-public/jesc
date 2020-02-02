@@ -12,7 +12,7 @@ PWMS_L       = 24 48
 
 # example single target
 VARIANT     ?= J
-MCU         ?= L
+MCU         ?= H
 FETON_DELAY ?= 15
 PWM         ?= 48
 
