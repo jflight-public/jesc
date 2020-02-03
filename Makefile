@@ -11,10 +11,10 @@ PWMS_H       = 24 48 96
 PWMS_L       = 24 48
 
 # example single target
-VARIANT     ?= J
+VARIANT     ?= F
 MCU         ?= H
-FETON_DELAY ?= 15
-PWM         ?= 48
+FETON_DELAY ?= 0
+PWM         ?= 24
 
 # configure the script to use the wine installation delivered with
 # SimplicityStudio. these wine settings are quite important. if you get

@@ -1331,7 +1331,15 @@ int0_int_pulse_ready:
 
 int0_int_set_pwm_registers:
     
-IF D_BITS == 1
+IF D_BITS == 0
+    mov A, Temp4
+    cpl A
+    anl A, #7
+    mov Temp2, A
+    mov A, Temp3
+    cpl A
+    mov Temp1, A
+ELSEIF D_BITS == 1
     mov A, Temp4
     cpl A
     rrc A
@@ -1377,6 +1385,7 @@ ELSEIF D_BITS == 3
     mov Temp1, A
 ENDIF
    
+IF D_BITS > 0
     mov A, Dither_Cur_Bit
     rl A
     mov Dither_Cur_Bit, A
