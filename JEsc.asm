@@ -2528,7 +2528,7 @@ wait_for_comp_out_high:
     mov Bit_Access, #00h        
 
 wait_for_comp_out_start:
-IF DEBUG_COMP
+IF DEBUG_COMP 
     setb P2.DebugPin
 ENDIF
     ; Set number of comparator readings
@@ -2543,8 +2543,6 @@ ENDIF
     clr Flags0.DEMAG_DETECTED
 
        
-
-
 IF  NK1306 == 0
     mov Temp2, #20              ; Too low value (~<15) causes rough running at pwm harmonics. Too high a value (~>35) causes the RCT4215 630 to run rough on full throttle
     mov     A, Comm_Period4x_H          ; Set number of readings higher for lower speeds
@@ -2581,9 +2579,14 @@ ELSE
 ENDIF   
     jnb Flags1.STARTUP_PHASE, comp_scale_samples
 
+IF PWM == 24
     mov Temp1, #27              ; Set many samples during startup, approximately one pwm period
     mov Temp2, #27
-
+ELSE
+    mov Temp1, #14              ; Set many samples during startup, approximately one pwm period
+    mov Temp2, #14
+ENDIF    
+    
 comp_scale_samples:
 IF MCU_48MHZ == 1
     clr C
@@ -4403,4 +4406,3 @@ CSEG AT 19FDh                   ;
 reset:
 ljmp    pgm_start
     
-END
