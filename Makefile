@@ -1,14 +1,14 @@
 # set current revision
 MAJOR ?= 2
-MINOR ?= 3
+MINOR ?= 4
 REVISION ?= $(MAJOR)_$(MINOR)
 
 # targets
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
 MCUS         = H L
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
-PWMS_H       = 24 48 96
-PWMS_L       = 24 48
+PWMS_H       = 48 96
+PWMS_L       = 
 
 # example single target
 VARIANT     ?= S
