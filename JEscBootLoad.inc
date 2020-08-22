@@ -293,7 +293,9 @@ put2:djnz	Bit_Cnt, put1
 
 
 	; Send char
-putc:acall waitf
+putc:
+;	orl	RTX_MDOUT, #(1 SHL RTX_PIN)	; Enable pushpull
+    acall waitf
 	acall waitf
 	mov	Bit_Cnt, #10
 	mov	A, Paral
@@ -311,6 +313,7 @@ put3:jb	Bit_Reg.1, ($+5)
 
 put4:djnz	Bit_Cnt, put3
 
+;	anl	RTX_MDOUT, #NOT(1 SHL RTX_PIN)	; Disable pushpull
 	ret
 
 

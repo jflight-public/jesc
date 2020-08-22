@@ -7,14 +7,14 @@ REVISION ?= $(MAJOR)_$(MINOR)
 TARGETS      = A B C D E F G H I J K L M N O P Q R S T U V W
 MCUS         = H L
 FETON_DELAYS = 0 5 10 15 20 25 30 40 50 70 90 120
-PWMS_H       = 48 96
+PWMS_H       = 24 48 96
 PWMS_L       = 
 
 # example single target
-VARIANT     ?= S
+VARIANT     ?= J
 MCU         ?= H
-FETON_DELAY ?= 90
-PWM         ?= 48
+FETON_DELAY ?= 15
+PWM         ?= 24
 
 # configure the script to use the wine installation delivered with
 # SimplicityStudio. these wine settings are quite important. if you get
@@ -80,7 +80,7 @@ $(OUTPUT_DIR)/JESC_$(1)$(2)$(3)_$(4)_$(REVISION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(AX51) $$< \
 		"DEFINE(ESCNO=$(_ESCNO)) " \
                 "DEFINE(MCU_48MHZ=$(_MCU_48MHZ)) "\
-                "DEFINE(NK1306=0) DEFINE(NO_DAMPING=0)"\
+                "DEFINE(NK1306=1) DEFINE(NO_DAMPING=0)"\
                 "DEFINE(PWM=$(_PWM)) "\
                 "DEFINE(FETON_DELAY=$(_FETON_DELAY)) "\
                 "DEFINE(MAJOR=$(MAJOR)) "\

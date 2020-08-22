@@ -3409,7 +3409,65 @@ ENDIF
 IF MCU_48MHZ == 1
     Set_MCU_Clk_48MHz
 ENDIF    
+    ; charge A pwm driver
+    clr A
+    AcomFET_off     ; BcomFET off
+    djnz    ACC, $      ; Allow some time after comfet is turned off
+    ApwmFET_on      ; BpwmFET on (in order to charge the driver of the BcomFET)
+    djnz    ACC, $      ; Let the pwmfet be turned on a while
+
+    mov SFRPAGE, #10h
+    mov CMP0CN1, #32 ; + is 1/2 * Mux A
+    mov SFRPAGE, #00h
+    mov CMP0MD, #08h ; run + via dac
+    mov CMP0MX, #021h ; cmp Mux A, Mux C
+    mov CMP0CN0, #82h ; comparator on, 10mv hysteresis on -
+
+    ApwmFET_off     ; BpwmFET off again
+    djnz    ACC, $      ; Allow some time after pwmfet is turned off
     
+
+wait_for_cout2:  
+    mov A, CMP0CN0
+    jnb ACC.6, wait_for_cout2
+
+    mov CMP0CN0, #82h ; reset falling edge flag
+
+    CcomFET_on
+    clr A
+    djnz ACC, $      ; Allow some time after comfet is turned on
+
+
+IF FETON_DELAY != 0 
+    mov R0, #(FETON_DELAY / 20 + 1)
+ELSE
+    mov R0, #1
+ENDIF 
+    ApwmFET_on
+
+    nop
+    nop
+   
+wait_for_short:
+    mov A, CMP0CN0 ; 2
+    jnb ACC.4, wait_no_short_yet ; 6
+    ApwmFET_off
+    CcomFET_off
+    jmp $
+
+wait_no_short_yet:  
+    mov A, CMP0CN0 ; 2
+    jnb ACC.4, wait_no_short ; 6
+    ApwmFET_off
+    CcomFET_off
+    jmp $
+
+wait_no_short:
+    djnz R0, wait_for_short ; 5
+
+    ApwmFET_off
+    CcomFET_off
+
     ; Initializing beep
     clr IE_EA           ; Disable interrupts explicitly
     call wait200ms  
@@ -4405,4 +4463,8 @@ check_bootloader_startup:
 CSEG AT 19FDh                   ;
 reset:
 ljmp    pgm_start
+    
+
+END
+
     
